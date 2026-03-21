@@ -15,12 +15,13 @@ class Settings(BaseSettings):
     # Search
     tavily_api_key: str = ""
 
-    # Supabase
-    supabase_url: str = ""
-    supabase_key: str = ""
+    # InsForge
+    insforge_url: str = ""
+    insforge_api_key: str = ""
 
     # App
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    debug: bool = True
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
