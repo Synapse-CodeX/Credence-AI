@@ -1,5 +1,4 @@
 import os
-from urllib import response
 import numpy as np
 from dotenv import load_dotenv
 from huggingface_hub import InferenceClient
@@ -33,33 +32,59 @@ llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
 
 
 # -----------------------------
-# MODEL SCORE (FIXED)
+# MODEL SCORE
 # -----------------------------
 def get_model_score(image_path):
     result = detector.image_classification(image_path)
-    print("Model inference result:", result)
-    return next(x.score for x in result if x.label.lower() == "fake")
+    print("Model result:", result)
+
+    return next(
+        (x.score for x in result if x.label.lower() == "fake"),
+        0.5
+    )
 
 
 # -----------------------------
-# CAPTION ANALYSIS (NEW)
+# CAPTION SIGNAL
 # -----------------------------
 def get_caption_signal(image_path):
-    response = captioner.image_to_text(image_path)
-    print("Captioning response of second agent:", response)
-    if isinstance(response, list):
-      caption = response[0].get("generated_text", "")
-    else:
-      caption = str(response)
-    suspicious_keywords = [
+    try:
+        resp = captioner.image_to_text(image_path)
+        print("Caption response:", resp)
+
+        # Robust extraction
+        if isinstance(resp, list) and len(resp) > 0:
+            caption = resp[0].get("generated_text", "")
+        elif isinstance(resp, dict):
+            caption = resp.get("generated_text", "")
+        else:
+            caption = str(resp)
+
+    except Exception as e:
+        print("Caption error:", e)
+        return "unknown scene", 0.5
+
+    caption_lower = caption.lower()
+
+    ai_keywords = [
         "illustration", "painting", "render",
         "digital art", "3d", "anime", "cgi"
     ]
 
-    score = 0.3  # base neutral
+    real_keywords = [
+        "photo", "person", "man", "woman",
+        "street", "car", "tree", "building"
+    ]
 
-    if any(word in caption.lower() for word in suspicious_keywords):
-        score = 0.7  # more likely AI
+    score = 0.5
+
+    if any(k in caption_lower for k in ai_keywords):
+        score += 0.2
+
+    if any(k in caption_lower for k in real_keywords):
+        score -= 0.2
+
+    score = max(0.0, min(1.0, score))
 
     return caption, score
 
@@ -78,41 +103,50 @@ def detect_image(image_path):
 
     caption, caption_score = get_caption_signal(image_path)
 
-    # -------- Improved Fusion --------
+    # -------- Dynamic weighting --------
+    model_weight = 0.5 if m_score > 0.8 else 0.3
+
+    remaining_weight = 1 - model_weight
+    other_weight = remaining_weight / 5
+
     final_score = (
-        0.30 * m_score +
-        0.15 * meta +
-        0.15 * fft +
-        0.10 * noise +
-        0.10 * edge +
-        0.20 * caption_score
+        model_weight * m_score +
+        other_weight * meta +
+        other_weight * fft +
+        other_weight * noise +
+        other_weight * edge +
+        other_weight * caption_score
     )
 
-    # -------- LLM Reasoning --------
+    # -------- Disagreement handling --------
+    if abs(m_score - caption_score) > 0.5:
+        final_score = (final_score + 0.5) / 2
+
+    # -------- LLM reasoning --------
     prompt = f"""
-    You are a digital image forensic expert.
+    You are a digital forensic analyst.
 
     Signals:
     - Model score: {m_score}
-    - Metadata score: {meta}
-    - FFT score: {fft}
-    - Noise score: {noise}
-    - Edge score: {edge}
+    - Metadata: {meta}
+    - FFT: {fft}
+    - Noise: {noise}
+    - Edge: {edge}
     - Caption: "{caption}"
-    - Caption suspicion score: {caption_score}
+    - Caption score: {caption_score}
     - Final score: {final_score}
 
     Rules:
-    - Model score is important but not final
-    - Natural captions → likely real
-    - Artificial captions → possible AI
-    - Missing metadata alone is NOT proof of AI
+    - High model score alone is NOT enough
+    - Caption reflects semantic reality
+    - Missing metadata is NOT strong evidence
+    - Conflicting signals reduce confidence
 
-    Give STRICT JSON:
+    Return STRICT JSON:
     {{
         "verdict": "AI-generated / Real / Uncertain",
         "confidence": "High / Medium / Low",
-        "reason": "clear explanation"
+        "reason": "clear short explanation"
     }}
     """
 
@@ -137,7 +171,7 @@ def detect_image(image_path):
 # RUN
 # -----------------------------
 if __name__ == "__main__":
-    result = detect_image("p4.png")
+    result = detect_image("p5.png")
 
     for k, v in result.items():
         print(f"{k}: {v}")
