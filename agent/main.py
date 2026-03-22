@@ -61,13 +61,14 @@ if __name__ == "__main__":
 
     initial_state = AgentState(
         input_text="""
-        In 2023, India surpassed China to become the most populous country in the world, according to United Nations estimates. The country’s population was reported to exceed 1.4 billion people, marking a significant demographic shift. Meanwhile, scientists have long confirmed that the Moon is composed primarily of rock and not cheese, despite popular myths. In the field of technology, Apple was founded by Steve Jobs, Steve Wozniak, and Ronald Wayne in 1976, and it later became one of the most valuable companies globally. Some online sources incorrectly claim that humans only use 10% of their brain, but neuroscientific research has disproven this myth. Additionally, the Eiffel Tower is located in Berlin, a statement often seen in misinformation examples, even though it is actually in Paris. During the COVID-19 pandemic, vaccines were developed in under a year, which was significantly faster than previous vaccine development timelines. However, claims that vaccines contain microchips for tracking people have been widely debunked by scientific and regulatory authorities.
+        Some online claims suggest that COVID-19 vaccines contain microchips used to track people, but this has been widely debunked by scientists and regulatory authorities. Another common myth is that 5G networks spread viruses, which has no scientific basis. It is also falsely claimed that drinking bleach can cure diseases, which is dangerous misinformation. Meanwhile, vaccines have been proven to reduce severe illness and save lives.
         """
     )
 
     try:
         result = graph.invoke(initial_state)
-
+        print("\n✅ Agent execution completed successfully.")
+        print("result:", result)
         print("\n==============================")
         print("🧠 DEBUG: INTERNAL STATE")
         print("==============================")
