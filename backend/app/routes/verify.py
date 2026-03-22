@@ -21,6 +21,14 @@ async def _run_pipeline_background(
     session_id: str, input_text: str, input_url: str | None, scraped_images: list[str] | None,
 ) -> None:
     """Import and run the pipeline in the background (deferred import to avoid circular deps)."""
+    # Wait for the client to connect to Socket.IO and join the session room
+    # Check up to 2 seconds
+    from app.sockets.events import ACTIVE_SESSIONS
+    for _ in range(20):
+        if session_id in ACTIVE_SESSIONS:
+            break
+        await asyncio.sleep(0.1)
+
     from app.agents.graph import run_pipeline
     await run_pipeline(session_id, input_text, input_url, scraped_images)
 

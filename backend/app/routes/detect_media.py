@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, UploadFile, File
 
 from app.models.schemas import (
     BatchMediaDetectionRequest,
@@ -8,7 +8,11 @@ from app.models.schemas import (
     MediaDetectionResponse,
     MediaDetectionResult,
 )
-from app.services.ai_media_detector import detect_ai_image, detect_ai_images_batch
+from app.services.ai_media_detector import (
+    detect_ai_image,
+    detect_ai_images_batch,
+    detect_ai_image_upload,
+)
 
 router = APIRouter(prefix="/api/detect-media", tags=["AI Media Detection"])
 
@@ -28,3 +32,12 @@ async def check_multiple_images(
     """Check multiple images for AI generation. Max 20 images per request."""
     results = await detect_ai_images_batch(body.image_urls)
     return MediaDetectionResponse(results=results)
+
+
+@router.post("/image-upload")
+async def check_uploaded_image(
+    file: UploadFile = File(...),
+) -> MediaDetectionResult:
+    """Check a single uploaded image for AI generation."""
+    file_bytes = await file.read()
+    return await detect_ai_image_upload(file_bytes, file.filename or "uploaded.jpg")

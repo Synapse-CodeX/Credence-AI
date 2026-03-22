@@ -57,6 +57,36 @@ async def detect_ai_image(image_url: str) -> MediaDetectionResult:
     )
 
 
+async def detect_ai_image_upload(file_bytes: bytes, filename: str) -> MediaDetectionResult:
+    """Check an uploaded image file against SightEngine's genai model."""
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.post(
+            SIGHTENGINE_URL,
+            data={
+                "models": "genai",
+                "api_user": settings.sightengine_api_user,
+                "api_secret": settings.sightengine_api_secret,
+            },
+            files={'media': (filename, file_bytes)}
+        )
+        response.raise_for_status()
+
+    data = response.json()
+
+    if data.get("status") != "success":
+        error_msg = data.get("error", {}).get("message", "Unknown SightEngine error")
+        raise ValueError(f"SightEngine API error: {error_msg}")
+
+    score = data["type"]["ai_generated"]
+
+    return MediaDetectionResult(
+        image_url=filename,
+        ai_generated_score=score,
+        verdict=_score_to_verdict(score),
+        confidence=_score_to_confidence(score),
+    )
+
+
 async def detect_ai_images_batch(
     image_urls: list[str],
 ) -> list[MediaDetectionResult]:

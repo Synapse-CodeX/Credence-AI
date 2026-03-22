@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 sio = socketio.AsyncServer(
     async_mode="asgi",
     cors_allowed_origins="*",
+    ping_timeout=120,
+    ping_interval=25,
     logger=False,
     engineio_logger=False,
 )
@@ -26,12 +28,15 @@ async def disconnect(sid: str):
     logger.info("Client disconnected: %s", sid)
 
 
+ACTIVE_SESSIONS: set[str] = set()
+
 @sio.event
 async def join_session(sid: str, data: dict):
     """Client joins a verification session room to receive updates."""
     session_id = data.get("session_id") if isinstance(data, dict) else data
     if session_id:
         sio.enter_room(sid, session_id)
+        ACTIVE_SESSIONS.add(session_id)
         logger.info("Client %s joined session %s", sid, session_id)
         await sio.emit(
             "joined",

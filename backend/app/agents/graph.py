@@ -12,6 +12,7 @@ imported unchanged.  The public API is ``run_pipeline()``, which:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -112,9 +113,9 @@ async def run_pipeline(
 
         initial_state = AgentState(input_text=input_text)
 
-        # The existing agent nodes are sync — run them via the compiled graph.
-        # LangGraph's invoke() handles sync nodes correctly.
-        result = _compiled_graph.invoke(initial_state)
+        # Run the sync LangGraph graph in a thread so it doesn't block the
+        # asyncio event loop (which Socket.IO needs for pings and emits).
+        result = await asyncio.to_thread(_compiled_graph.invoke, initial_state)
 
         # ── Emit step-by-step progress (retroactively, since the nodes are sync)
         agent_claims = result.get("claims", [])
@@ -126,10 +127,12 @@ async def run_pipeline(
             "claim_count": len(agent_claims),
             "claims": [c.claim for c in agent_claims],
         })
+        await asyncio.sleep(0.3)
 
         await emit_progress(session_id, "searching", "completed", {
             "total_sources": sum(len(v) for v in agent_evidence.values()),
         })
+        await asyncio.sleep(0.3)
 
         await emit_progress(session_id, "verifying", "completed", {
             "verdict_count": len(agent_verifications),
