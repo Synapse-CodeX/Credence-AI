@@ -1,70 +1,94 @@
-# Getting Started with Create React App
+# VeritAI — AI Fact-Checking Engine
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A sleek, neon-themed React web app that uses the Claude AI API to automatically extract claims from text, verify them against real-world knowledge, and generate a detailed accuracy report.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **Claim Extraction** — Decomposes input text into discrete, verifiable facts
+- **Verification Engine** — Verifies each claim with confidence scores and reasoning
+- **AI Content Detection** — Estimates whether the text is AI-generated or human-written
+- **Live Pipeline View** — Real-time progress indicators for each stage
+- **Interactive Report** — Click to expand each claim for full analysis, sources, and search queries
+- **Neon Dark UI** — Cyberpunk-inspired design with glowing effects
 
-### `npm start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Frontend**: React 18
+- **API**: Anthropic Claude (claude-sonnet-4-20250514)
+- **Fonts**: Syne + Space Mono (Google Fonts)
+- **Styling**: Pure CSS-in-JS with CSS variables
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Setup
 
-### `npm test`
+### 1. Install dependencies
+```bash
+npm install
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 2. Configure your Anthropic API key
 
-### `npm run build`
+Open `src/services/api.js`. The API key is handled by the Anthropic proxy — no key needed for Claude.ai artifact mode.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+For standalone deployment, add your API key to the fetch headers:
+```js
+headers: {
+  "Content-Type": "application/json",
+  "x-api-key": "YOUR_API_KEY_HERE",
+  "anthropic-version": "2023-06-01",
+  "anthropic-dangerous-direct-browser-access": "true",
+}
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 3. Run locally
+```bash
+npm start
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 4. Build for production
+```bash
+npm run build
+```
 
-### `npm run eject`
+## Project Structure
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```
+src/
+├── App.js                  # Main application state & orchestration
+├── index.js                # React entry point
+├── index.css               # Global styles, CSS variables, animations
+├── components/
+│   ├── Background.js       # Animated grid + neon orbs background
+│   ├── Header.js           # Top nav with logo and status indicator
+│   ├── InputPanel.js       # Text / URL input with mode tabs
+│   ├── Pipeline.js         # Step-by-step pipeline progress display
+│   ├── ClaimCard.js        # Individual claim with expandable results
+│   ├── VerdictBadge.js     # TRUE / FALSE / PARTIAL / UNVERIFIABLE badge
+│   └── SummaryReport.js    # Overall accuracy score + AI detection
+└── services/
+    └── api.js              # Anthropic API calls (extract, verify, detect)
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Pipeline Flow
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+1. **Claim Extraction** → Claude splits input into atomic verifiable facts
+2. **Evidence Retrieval** → Claude formulates search queries per claim
+3. **Verification** → Each claim is cross-referenced and labeled
+4. **Report Generation** → AI detection + overall accuracy score computed
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Verdicts
 
-## Learn More
+| Verdict | Meaning |
+|---|---|
+| ✓ TRUE | Claim is supported by evidence |
+| ◐ PARTIALLY TRUE | Claim contains some accurate and some inaccurate elements |
+| ✗ FALSE | Claim contradicts known evidence |
+| ? UNVERIFIABLE | Insufficient evidence to determine truth |
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Bonus Features Implemented
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+- **AI Content Detection** — Probability score for AI vs human authorship with signal analysis
 
-### Code Splitting
+## Notes
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- URL fetching requires a backend proxy (e.g. FastAPI/Express) to avoid CORS restrictions. Currently, paste text directly.
+- For production, add rate limit handling and retry logic in `api.js`.
