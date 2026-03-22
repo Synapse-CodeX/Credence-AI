@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import LandingPage from './components/LandingPage';
 import Background from './components/Background';
 import Header from './components/Header';
@@ -11,7 +12,7 @@ import HistoryPanel from './components/HistoryPanel';
 import ClaimHighlight from './components/ClaimHighlight';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import AuthPage from './components/AuthPage';
-import { analyzeAll, analyzeAIOnly } from './services/api';
+import { startVerification, checkAIText, checkAIImage, connectToSession } from './services/api';
 import { downloadReport } from './services/downloadReport';
 import { saveAnalysis, getHistory } from './services/history';
 
@@ -93,17 +94,12 @@ function AIDetectionResult({ result }) {
 }
 
 export default function App() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isLoaded } = useAuth();
   const { user } = useUser();
-  // Use a stable userId — always 'guest' until Clerk confirms identity
-  const userId = user?.id || 'guest';
+  const { isSignedIn } = useAuth();
+  const userId = user?.id || 'test_user';
 
-  const [showLanding, setShowLanding] = useState(true);
-
-  // Auto-skip landing if already signed in
-  useEffect(() => {
-    if (isLoaded && isSignedIn) setShowLanding(false);
-  }, [isLoaded, isSignedIn]);
+  const navigate = useNavigate();
 
   // Core analysis state
   const [phase, setPhase] = useState('idle');
@@ -116,82 +112,151 @@ export default function App() {
   const [biasData, setBiasData] = useState(null);
   const [error, setError] = useState(null);
   const [inputText, setInputText] = useState('');
+  const [progressMsg, setProgressMsg] = useState('CONNECTING TO ENGINE...');
+  const abortControllerRef = React.useRef(null);
 
   // History state — use a ref so refreshHistory always uses latest userId
   const [history, setHistory] = useState([]);
   const userIdRef = React.useRef(userId);
   useEffect(() => { userIdRef.current = userId; }, [userId]);
 
-  const refreshHistory = useCallback(() => {
+  const refreshHistory = useCallback(async () => {
     const id = userIdRef.current;
-    const data = getHistory(id);
+    const data = await getHistory(id);
     setHistory(data);
   }, []);
 
   // Load history whenever userId changes (after Clerk loads)
   useEffect(() => { refreshHistory(); }, [userId, refreshHistory]);
 
-  const handleAnalyze = async ({ mode, content }) => {
+  const handleAnalyze = async ({ mode, content, imageFile }) => {
     try {
+      // Clean up any existing stream
+      if (abortControllerRef.current) { abortControllerRef.current.abort(); abortControllerRef.current = null; }
       setPhase('running'); setAnalysisMode(mode); setError(null);
       setClaims([]); setResults([]); setVerifiedCount(0);
-      setAiDetection(null); setBiasData(null); setInputText(content);
+      setAiDetection(null); setBiasData(null); setInputText(content || (imageFile ? imageFile.name : ''));
+      setProgressMsg('CONNECTING TO ENGINE...');
 
       if (mode === 'factcheck') {
-        setPipelineStep('extract'); await sleep(600);
-        setPipelineStep('search');  await sleep(600);
-        setPipelineStep('verify');
+        const isUrl = content.startsWith('http://') || content.startsWith('https://');
+        const reqPayload = isUrl ? { url: content, user_id: userId } : { text: content, user_id: userId };
 
-        // Single API call — extract + verify + AI detection + bias all at once
-        const analysis = await analyzeAll(content);
-        const combined = analysis.claims;
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
 
-        // Feed claims in one by one for animated reveal
-        const claimsOnly = combined.map(({ id, claim, context }) => ({ id, claim, context }));
-        setClaims(claimsOnly);
-        for (let i = 0; i < combined.length; i++) {
-          const { verdict, confidence, explanation, sources, searchQuery, conflicting, timeSensitive, difficulty } = combined[i];
-          setResults(prev => [...prev, { verdict, confidence, explanation, sources, searchQuery, conflicting, timeSensitive, difficulty }]);
-          setVerifiedCount(i + 1);
-          await sleep(350);
-        }
+        // Connect to session and stream progress natively via fetch
+        startVerification(
+          reqPayload,
+          (progressInfo) => {
+            const { step, status, data } = progressInfo;
+            
+            // Map backend steps to frontend pipeline steps
+            if (step === 'scraping') {
+              setPipelineStep('extract');
+              if (status === 'started' && data.message) setProgressMsg(data.message.toUpperCase());
+              else if (status === 'completed') setProgressMsg(`SCRAPED ${data.char_count} CHARACTERS...`);
+            }
+            if (step === 'extracting') {
+              setPipelineStep('extract');
+              if (status === 'started' && data.message) setProgressMsg(data.message.toUpperCase());
+            }
+            if (step === 'searching') {
+              setPipelineStep('search');
+              if (status === 'started' && data.message) setProgressMsg(data.message.toUpperCase());
+              else if (status === 'completed') setProgressMsg(`ANALYZED ${data.total_sources || 0} SOURCES...`);
+            }
+            if (step === 'verifying') {
+              setPipelineStep('verify');
+              if (status === 'started' && data.message) setProgressMsg(data.message.toUpperCase());
+            }
+            if (step === 'reporting') {
+              setPipelineStep('report');
+              if (status === 'started' && data.message) setProgressMsg(data.message.toUpperCase());
+            }
+            
+            if (status === 'completed' && step === 'extracting' && data.claims) {
+               setClaims(data.claims.map((claimText, idx) => ({ id: idx, claim: claimText, context: '' })));
+            }
+            if (status === 'completed' && step === 'scraping') {
+               setInputText(`[Scraped URL] ${content}`);
+            }
 
-        setPipelineStep('report');
-        setAiDetection(analysis.aiDetection);
-        setBiasData(analysis.bias);
+          },
+          (report) => {
+            // Complete
+            setPipelineStep('report');
+            setPhase('done');
 
-        // Save to history
-        const verdicts = { TRUE: 0, 'PARTIALLY TRUE': 0, FALSE: 0, UNVERIFIABLE: 0 };
-        combined.forEach(c => { if (verdicts[c.verdict] !== undefined) verdicts[c.verdict]++; });
-        const accuracyScore = Math.round(((verdicts.TRUE + verdicts['PARTIALLY TRUE'] * 0.5) / combined.length) * 100);
-        saveAnalysis(userIdRef.current, {
-          mode: 'factcheck',
-          snippet: content.slice(0, 60) + (content.length > 60 ? '...' : ''),
-          accuracyScore,
-          verdicts,
-          claimCount: combined.length,
-        });
-        refreshHistory();
+            // map backend report to frontend models
+            if (report.claims) {
+               setClaims(report.claims.map(c => ({ id: c.id, claim: c.text, context: c.context || '' })));
+            }
+            if (report.verdicts) {
+               setResults(report.verdicts.map(v => ({
+                  verdict: v.verdict === "PARTIALLY_TRUE" ? "PARTIALLY TRUE" : v.verdict,
+                  confidence: v.confidence_score,
+                  explanation: v.reasoning,
+                  sources: v.cited_sources || [],
+               })));
+               setVerifiedCount(report.verdicts.length);
+            }
+            if (report.ai_text_result) {
+               setAiDetection({
+                  aiScore: Math.round(report.ai_text_result.ai_probability * 100),
+                  humanScore: Math.round((1 - report.ai_text_result.ai_probability) * 100),
+                  verdict: report.ai_text_result.verdict === "AI" ? "LIKELY AI" : report.ai_text_result.verdict === "Human" ? "LIKELY HUMAN" : "MIXED",
+                  signals: report.ai_text_result.signals.map(s => typeof s === 'string' ? s : JSON.stringify(s))
+               });
+            }
+
+            // Save to history
+            if (report.verdicts && report.verdicts.length > 0) {
+              const verdictsCounts = { TRUE: 0, 'PARTIALLY TRUE': 0, FALSE: 0, UNVERIFIABLE: 0 };
+              report.verdicts.forEach(c => { 
+                  const v = c.verdict === "PARTIALLY_TRUE" ? "PARTIALLY TRUE" : c.verdict;
+                  if (verdictsCounts[v] !== undefined) verdictsCounts[v]++; 
+              });
+              const accuracyScore = Math.round(((verdictsCounts.TRUE + verdictsCounts['PARTIALLY TRUE'] * 0.5) / report.verdicts.length) * 100);
+              saveAnalysis(userIdRef.current, {
+                mode: 'factcheck',
+                snippet: content.slice(0, 60) + (content.length > 60 ? '...' : ''),
+                accuracyScore,
+                verdicts: verdictsCounts,
+                claimCount: report.verdicts.length,
+              });
+              refreshHistory();
+            }
+          },
+          (errMsg) => {
+            setError(errMsg);
+            setPhase('error');
+          },
+          controller.signal
+        );
 
       } else {
-        // AI detection mode — single API call for AI detection + bias
-        setPipelineStep('extract'); await sleep(500);
+        // AI detection mode
         setPipelineStep('verify');
-        const analysis = await analyzeAIOnly(content);
+        let analysis;
+        if (imageFile) {
+          analysis = await checkAIImage(imageFile);
+        } else {
+          analysis = await checkAIText(content);
+        }
         setAiDetection(analysis.aiDetection);
         setBiasData(analysis.bias);
         setPipelineStep('report');
+        setPhase('done');
 
         saveAnalysis(userIdRef.current, {
           mode: 'aidetect',
-          snippet: content.slice(0, 60) + (content.length > 60 ? '...' : ''),
+          snippet: content ? (content.slice(0, 60) + (content.length > 60 ? '...' : '')) : `[Image: ${imageFile?.name}]`,
           aiScore: analysis.aiDetection.aiScore,
           verdict: analysis.aiDetection.verdict,
         });
         refreshHistory();
       }
-
-      setPhase('done');
     } catch (err) {
       setError(err.message || 'An unexpected error occurred.');
       setPhase('error');
@@ -199,6 +264,7 @@ export default function App() {
   };
 
   const handleReset = () => {
+    if (abortControllerRef.current) { abortControllerRef.current.abort(); abortControllerRef.current = null; }
     setPhase('idle'); setAnalysisMode(null); setPipelineStep(null);
     setClaims([]); setResults([]); setVerifiedCount(0);
     setAiDetection(null); setBiasData(null); setError(null); setInputText('');
@@ -218,13 +284,10 @@ export default function App() {
     </div>
   );
 
-  if (showLanding) return <LandingPage onEnter={() => setShowLanding(false)} isSignedIn={isSignedIn} />;
-  if (!isSignedIn) return <AuthPage />;
-
-  return (
+  const dashboardElement = (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
       <Background />
-      <Header onBackToLanding={() => setShowLanding(true)} />
+      <Header onBackToLanding={() => navigate('/')} />
 
       <main style={{ position: 'relative', zIndex: 1, maxWidth: '1380px', margin: '0 auto', padding: '32px 28px 80px' }}>
 
@@ -331,7 +394,7 @@ export default function App() {
             {/* LEFT — pipeline + history */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '20px' }}>
               <SectionLabel color="var(--cyan)">PIPELINE</SectionLabel>
-              <Pipeline currentStep={phase === 'done' ? 'report' : pipelineStep} claimCount={claims.length} verifiedCount={verifiedCount} />
+              <Pipeline currentStep={phase === 'done' ? 'report' : pipelineStep} claimCount={claims.length} verifiedCount={verifiedCount} isDone={phase === 'done'} />
 
               {/* Claim index */}
               {analysisMode === 'factcheck' && claims.length > 0 && (
@@ -370,8 +433,17 @@ export default function App() {
                   <SectionLabel>EXTRACTED CLAIMS</SectionLabel>
                   {claims.length === 0 ? (
                     <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-lg)', padding: '48px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--dim)', letterSpacing: '1px' }}>
-                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '2px solid var(--a1)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
-                      PROCESSING...
+                      {phase === 'done' ? (
+                        <>
+                          <div style={{ fontSize: '24px', marginBottom: '12px', opacity: 0.4 }}>◈</div>
+                          NO VERIFIABLE CLAIMS FOUND
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '2px solid var(--a1)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
+                          {progressMsg}
+                        </>
+                      )}
                     </div>
                   ) : (
                     <>
@@ -448,5 +520,14 @@ export default function App() {
         )}
       </main>
     </div>
+  );
+
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage onEnter={() => navigate(isSignedIn ? '/app' : '/auth')} isSignedIn={isSignedIn} />} />
+      <Route path="/auth" element={<AuthPage onSuccess={() => navigate('/app')} />} />
+      <Route path="/app" element={isSignedIn ? dashboardElement : <Navigate to="/auth" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }

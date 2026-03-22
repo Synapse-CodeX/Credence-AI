@@ -112,6 +112,7 @@ class Report(BaseModel):
 class VerifyRequest(BaseModel):
     text: str | None = None
     url: str | None = None
+    user_id: str | None = None
 
 
 class VerifyResponse(BaseModel):

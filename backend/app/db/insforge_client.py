@@ -47,6 +47,7 @@ async def create_session(
     session_id: str,
     input_text: str,
     input_url: str | None = None,
+    user_id: str | None = None,
 ) -> bool:
     """Create a new verification session."""
     base = _base_url()
@@ -60,6 +61,9 @@ async def create_session(
             "input_url": input_url,
             "status": SessionStatus.PROCESSING.value,
         }
+        if user_id:
+            payload["user_id"] = user_id
+
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(
                 _records_url("verification_sessions"),
@@ -129,7 +133,11 @@ async def get_session(session_id: str) -> dict | None:
         return None
 
 
-async def get_history(limit: int = 20, offset: int = 0) -> tuple[list[HistoryItem], int]:
+async def get_history(
+    limit: int = 20,
+    offset: int = 0,
+    user_id: str | None = None,
+) -> tuple[list[HistoryItem], int]:
     """Fetch past verification sessions for the history page."""
     base = _base_url()
     if base is None:
@@ -146,6 +154,8 @@ async def get_history(limit: int = 20, offset: int = 0) -> tuple[list[HistoryIte
             "limit": str(limit),
             "offset": str(offset),
         }
+        if user_id:
+            params["user_id"] = f"eq.{user_id}"
 
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.get(

@@ -1,40 +1,38 @@
-// Analysis History — stored in localStorage per user
+// Analysis History — Fetching from Backend
 
-const KEY_PREFIX = 'veritai_history_';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
 
-function getKey(userId) {
-  return `${KEY_PREFIX}${userId || 'guest'}`;
+export async function getHistory(userId) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/history?limit=20&offset=0&user_id=${userId}`);
+    if (!response.ok) return [];
+    
+    const data = await response.json();
+    return data.items.map(item => ({
+      id: item.session_id,
+      timestamp: item.created_at ? new Date(item.created_at).getTime() : Date.now(),
+      mode: 'factcheck', // Default until backend supports aiding distinguishing mode
+      snippet: item.input_text.slice(0, 60) + (item.input_text.length > 60 ? '...' : ''),
+      accuracyScore: item.overall_accuracy !== null ? item.overall_accuracy : undefined,
+      claimCount: item.claim_count,
+      status: item.status
+    }));
+  } catch (err) {
+    console.error("Failed to fetch history:", err);
+    return [];
+  }
 }
 
-export function saveAnalysis(userId, entry) {
-  try {
-    const key = getKey(userId);
-    const existing = getHistory(userId);
-    const newEntry = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      timestamp: Date.now(),
-      ...entry,
-    };
-    const updated = [newEntry, ...existing].slice(0, 20); // keep last 20
-    localStorage.setItem(key, JSON.stringify(updated));
-    return newEntry;
-  } catch { return null; }
-}
-
-export function getHistory(userId) {
-  try {
-    const raw = localStorage.getItem(getKey(userId));
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+export async function saveAnalysis(userId, entry) {
+  // The backend already handles persisting sessions via the execution pipeline.
+  // There is no need for the frontend to save it explicitly anymore.
+  return entry;
 }
 
 export function deleteAnalysis(userId, id) {
-  try {
-    const updated = getHistory(userId).filter(e => e.id !== id);
-    localStorage.setItem(getKey(userId), JSON.stringify(updated));
-  } catch {}
+  console.log('Delete history currently not implemented in backend REST API');
 }
 
 export function clearHistory(userId) {
-  try { localStorage.removeItem(getKey(userId)); } catch {}
-}
+  console.log('Clear history currently not implemented in backend REST API');
+}

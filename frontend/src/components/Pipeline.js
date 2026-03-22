@@ -7,9 +7,9 @@ const STEPS = [
   { id:'report',  code:'04', label:'REPORT GENERATION',  sub:'Compiling accuracy report',              icon:'◆' },
 ];
 
-export default function Pipeline({ currentStep, claimCount, verifiedCount }) {
+export default function Pipeline({ currentStep, claimCount, verifiedCount, isDone }) {
   const currentIdx = STEPS.findIndex(s => s.id === currentStep);
-  const allDone = currentStep === 'report' && verifiedCount >= claimCount && claimCount > 0;
+  const allDone = isDone || (currentStep === 'report' && verifiedCount >= claimCount && claimCount > 0);
 
   return (
     <div className="glass-card" style={{

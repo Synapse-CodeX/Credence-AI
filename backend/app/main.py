@@ -11,7 +11,6 @@ from app.routes.health import router as health_router
 from app.routes.history import router as history_router
 from app.routes.report import router as report_router
 from app.routes.verify import router as verify_router
-from app.sockets.events import sio
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
 
@@ -46,8 +45,5 @@ api.include_router(history_router)
 api.include_router(detect_media_router)
 api.include_router(detect_text_router)
 
-# ─── Socket.IO mount ────────────────────────────────────────────────────────
-# The Socket.IO ASGI app wraps the FastAPI app.
-# This is the final ASGI application that uvicorn/fastapi CLI should serve.
-
-app = socketio.ASGIApp(sio, other_asgi_app=api)
+# ─── Final app ────────────────────────────────────────────────────────
+app = api

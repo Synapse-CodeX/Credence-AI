@@ -6,6 +6,11 @@
       "sourceType": "github",
       "computedHash": "2c8457cd4de24484b47a25f04cadb2bc1ca41b76a2532811b4ce050f446d3fbb"
     },
+    "create-readme": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "computedHash": "d0ece1b2164ce1376e4ab6e98d6ac079df3a2a94f5f02224362b6a1ce2516ae9"
+    },
     "fastapi": {
       "source": "fastapi/fastapi",
       "sourceType": "github",
@@ -16,6 +21,11 @@
       "sourceType": "github",
       "computedHash": "645b891da1edbae76ab79c7b088d4e73397464f8396edaf773c0e01971ce75d6"
     },
+    "github-actions-workflow": {
+      "source": "aj-geddes/useful-ai-prompts",
+      "sourceType": "github",
+      "computedHash": "8d430e8c4e7feb56f81aa4a2bf669ec2ad51eb2293652ce95fde7fd6487fd880"
+    },
     "insforge": {
       "source": "insforge/agent-skills",
       "sourceType": "github",
@@ -25,6 +35,16 @@
       "source": "insforge/agent-skills",
       "sourceType": "github",
       "computedHash": "5f9749cf5822d8ef4061ff2f48c0cf9adfbd112e0de03998e84c27afa817e61e"
+    },
+    "multi-stage-dockerfile": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "computedHash": "698bf93a84dae18fd7bd0b1d35c21427307fde78fbdf4624be9726f5f98189ca"
+    },
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "e218e50fe7057a4db91390e579c7db5aafac2394c31a3d8e5fa9444c8fa00726"
     }
   }
 }

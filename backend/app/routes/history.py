@@ -14,7 +14,8 @@ router = APIRouter(prefix="/api", tags=["History"])
 async def list_history(
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
+    user_id: str | None = None,
 ) -> HistoryResponse:
     """List past verification sessions with pagination."""
-    items, total = await get_history(limit=limit, offset=offset)
+    items, total = await get_history(limit=limit, offset=offset, user_id=user_id)
     return HistoryResponse(items=items, total=total)

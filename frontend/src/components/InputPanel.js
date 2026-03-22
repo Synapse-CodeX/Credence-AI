@@ -20,6 +20,8 @@ export default function InputPanel({ onAnalyze, loading }) {
   const [listening, setListening] = useState(false);
   const [voiceSupported] = useState(() => 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
   const recognitionRef = useRef(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   const startVoice = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -57,6 +59,15 @@ export default function InputPanel({ onAnalyze, loading }) {
 
   const readFile = (file) => {
     if (!file) return;
+
+    if (mode === 'aidetect' && file.type.startsWith('image/')) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+      setText('');
+      setFileName(file.name);
+      return;
+    }
+
     const allowed = ['text/plain', 'application/pdf', 'text/html',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword'];
@@ -66,6 +77,8 @@ export default function InputPanel({ onAnalyze, loading }) {
       const content = e.target.result;
       setText(content);
       setFileName(file.name);
+      setImageFile(null);
+      setImagePreview(null);
     };
     reader.readAsText(file);
   };
@@ -84,6 +97,10 @@ export default function InputPanel({ onAnalyze, loading }) {
   };
 
   const submit = () => {
+    if (mode === 'aidetect' && imageFile) {
+      onAnalyze({ mode, imageFile });
+      return;
+    }
     if (text.trim().length > 10) onAnalyze({ mode, content: text });
   };
 
@@ -91,10 +108,12 @@ export default function InputPanel({ onAnalyze, loading }) {
     const arr = SAMPLES[mode];
     setText(arr[Math.floor(Math.random() * arr.length)]);
     setFileName(null);
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const wc = text.trim().split(/\s+/).filter(Boolean).length;
-  const canGo = !loading && text.trim().length > 10;
+  const canGo = !loading && ((text.trim().length > 10) || (mode === 'aidetect' && !!imageFile));
   const accentColor = mode === 'factcheck' ? 'var(--a1)' : 'var(--cyan)';
   const accentGlow = mode === 'factcheck' ? 'var(--a1-glow)' : 'rgba(0,212,255,0.25)';
 
@@ -161,7 +180,7 @@ export default function InputPanel({ onAnalyze, loading }) {
               }}>
                 <span>📄</span>{fileName}
                 <span
-                  onClick={() => { setText(''); setFileName(null); }}
+                  onClick={() => { setText(''); setFileName(null); setImageFile(null); setImagePreview(null); }}
                   style={{ cursor: 'pointer', opacity: 0.6, marginLeft: '2px' }}
                 >✕</span>
               </div>
@@ -181,36 +200,44 @@ export default function InputPanel({ onAnalyze, loading }) {
           </div>
         </div>
 
-        {/* textarea with line numbers */}
+        {/* textarea with line numbers OR image preview */}
         <div style={{ display: 'flex' }}>
-          <div style={{
-            padding: '14px 10px', background: 'var(--bg0)',
-            borderRight: '1px solid var(--line)',
-            display: 'flex', flexDirection: 'column',
-            userSelect: 'none', minWidth: '36px',
-          }}>
-            {Array.from({ length: 9 }, (_, i) => (
-              <div key={i} style={{ fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--bg3)', lineHeight: '22.1px', textAlign: 'right' }}>
-                {i + 1}
+          {mode === 'aidetect' && imagePreview ? (
+            <div style={{ flex: 1, padding: '16px', display: 'flex', justifyContent: 'center', background: 'var(--bg0)', minHeight: '230px' }}>
+              <img src={imagePreview} alt="upload preview" style={{ maxHeight: '200px', objectFit: 'contain', borderRadius: 'var(--radius)' }} />
+            </div>
+          ) : (
+            <>
+              <div style={{
+                padding: '14px 10px', background: 'var(--bg0)',
+                borderRight: '1px solid var(--line)',
+                display: 'flex', flexDirection: 'column',
+                userSelect: 'none', minWidth: '36px',
+              }}>
+                {Array.from({ length: 9 }, (_, i) => (
+                  <div key={i} style={{ fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--bg3)', lineHeight: '22.1px', textAlign: 'right' }}>
+                    {i + 1}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <textarea
-            value={text}
-            onChange={e => { setText(e.target.value); setFileName(null); }}
-            placeholder={dragOver
-              ? '  ↓ drop file here...'
-              : mode === 'factcheck'
-                ? '  // paste article, essay, news — any text with factual claims...'
-                : '  // paste any text — article, email, essay — to detect AI authorship...'}
-            rows={9}
-            style={{
-              flex: 1, background: 'var(--bg0)', border: 'none',
-              padding: '14px 16px', color: 'var(--text)',
-              fontSize: '13px', fontFamily: 'var(--mono)', lineHeight: '1.7',
-              resize: 'vertical', outline: 'none',
-            }}
-          />
+              <textarea
+                value={text}
+                onChange={e => { setText(e.target.value); setFileName(null); setImageFile(null); setImagePreview(null); }}
+                placeholder={dragOver
+                  ? '  ↓ drop file here...'
+                  : mode === 'factcheck'
+                    ? '  // paste article, essay, news — any text with factual claims...'
+                    : '  // paste any text — article, email, essay — to detect AI authorship...'}
+                rows={9}
+                style={{
+                  flex: 1, background: 'var(--bg0)', border: 'none',
+                  padding: '14px 16px', color: 'var(--text)',
+                  fontSize: '13px', fontFamily: 'var(--mono)', lineHeight: '1.7',
+                  resize: 'vertical', outline: 'none',
+                }}
+              />
+            </>
+          )}
         </div>
 
         {/* action bar */}
@@ -231,7 +258,7 @@ export default function InputPanel({ onAnalyze, loading }) {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".txt,.md,.html,.csv,.js,.py,.json,.xml,.log"
+              accept={mode === 'aidetect' ? "image/*,.txt,.md,.html,.csv,.js,.py,.json,.xml,.log" : ".txt,.md,.html,.csv,.js,.py,.json,.xml,.log"}
               onChange={handleFileChange}
               style={{ display: 'none' }}
             />
