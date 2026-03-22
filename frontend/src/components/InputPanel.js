@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const SAMPLES = {
   factcheck: [
@@ -17,6 +17,41 @@ export default function InputPanel({ onAnalyze, loading }) {
   const [mode, setMode] = useState('factcheck');
   const [text, setText] = useState('');
   const [dragOver, setDragOver] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [voiceSupported] = useState(() => 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+  const recognitionRef = useRef(null);
+
+  const startVoice = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    const rec = new SpeechRecognition();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
+    recognitionRef.current = rec;
+    rec.onstart = () => setListening(true);
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    rec.onresult = (e) => {
+      let transcript = '';
+      for (let i = 0; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript;
+      }
+      setText(transcript);
+      setFileName(null);
+    };
+    rec.start();
+  };
+
+  const stopVoice = () => {
+    recognitionRef.current?.stop();
+    setListening(false);
+  };
+
+  const toggleVoice = () => {
+    if (listening) stopVoice();
+    else startVoice();
+  };
   const [fileName, setFileName] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -201,6 +236,40 @@ export default function InputPanel({ onAnalyze, loading }) {
               style={{ display: 'none' }}
             />
 
+            {/* 🎤 Voice input button */}
+            {voiceSupported && (
+              <button
+                onClick={toggleVoice}
+                title={listening ? 'Stop recording' : 'Start voice input'}
+                style={{
+                  width: '38px', height: '38px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: listening ? 'rgba(255,69,96,0.12)' : 'transparent',
+                  border: `1px solid ${listening ? 'var(--red)' : 'var(--line2)'}`,
+                  borderRadius: 'var(--radius)',
+                  color: listening ? 'var(--red)' : 'var(--dim)',
+                  fontSize: '16px', lineHeight: 1,
+                  cursor: 'pointer', transition: 'all 0.15s',
+                  boxShadow: listening ? '0 0 12px rgba(255,69,96,0.3)' : 'none',
+                  animation: listening ? 'pulse 1s ease infinite' : 'none',
+                }}
+                onMouseEnter={e => {
+                  if (!listening) {
+                    e.currentTarget.style.borderColor = 'var(--red)';
+                    e.currentTarget.style.color = 'var(--red)';
+                    e.currentTarget.style.boxShadow = '0 0 10px rgba(255,69,96,0.2)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!listening) {
+                    e.currentTarget.style.borderColor = 'var(--line2)';
+                    e.currentTarget.style.color = 'var(--dim)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }
+                }}
+              >🎤</button>
+            )}
+
             {/* + upload button */}
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -251,7 +320,7 @@ export default function InputPanel({ onAnalyze, loading }) {
 
       {/* drag hint */}
       <div style={{ marginTop: '8px', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '1px', textAlign: 'right' }}>
-        + UPLOAD or DRAG & DROP .txt .md .html .csv files
+        🎤 VOICE · + UPLOAD · DRAG & DROP .txt .md .html .csv files
       </div>
     </div>
   );
