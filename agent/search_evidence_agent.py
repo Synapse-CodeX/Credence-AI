@@ -13,9 +13,9 @@ def search_evidence(state: AgentState) -> dict:
     # -----------------------------
     # DOMAIN FILTERS
     # -----------------------------
-    bad_domains = ["facebook", "instagram", "reddit", "yelp", "example.com", "twitter", "tiktok", "quora", "medium", "youtube", "pinterest", "tumblr", "vk", "weibo", "dailymotion", "flickr", "livejournal", "myspace"]
+    bad_domains = ["facebook", "instagram", "reddit", "yelp", "example", "twitter", "tiktok", "quora", "medium", "youtube", "pinterest", "tumblr", "vk", "weibo", "dailymotion", "flickr", "livejournal", "myspace","westeamahead"]
 
-    trusted_domains = ["bbc", "reuters", "who", "un", "gov", "nature", "apnews", "npr", "wikipedia", "sciencedaily", "nih", "cdc", "nature", "sciencealert"]
+    trusted_domains = ["bbc", "reuters", "who", "un", "gov", "nature", "apnews", "npr", "wikipedia", "sciencedaily", "nih", "cdc", "nature", "sciencealert","nasa", "arxiv", "ssrn", "jstor", "springer", "elsevier", "tandfonline", "nature", "sciencemag", "plos", "frontiersin", "biorxiv","nationalgeographic"]
 
     for claim_obj in state.claims:
         claim_text = claim_obj.claim
