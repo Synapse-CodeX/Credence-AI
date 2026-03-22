@@ -239,7 +239,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
             <h2 className="landing-section-title">BUILT WITH THE <span style={{ color: 'var(--green)' }}>BEST</span></h2>
           </div>
           <div className="landing-tech-grid">
-            <TechBadge name="GOOGLE GEMINI" icon="✦" color="var(--a1)" />
+            <TechBadge name="OPENAI GPT-4.0" icon="✦" color="var(--a1)" />
             <TechBadge name="REACT 18" icon="⚛️" color="#61dafb" />
             <TechBadge name="FASTAPI" icon="⚡" color="var(--green)" />
             <TechBadge name="CLERK AUTH" icon="🔐" color="var(--cyan)" />
