@@ -1,6 +1,6 @@
 // src/services/api.js
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 
 // ─── Factcheck verification pipeline (SSE Stream) ─────────────────────────
 export async function startVerification(reqPayload, onProgress, onComplete, onError, signal) {
