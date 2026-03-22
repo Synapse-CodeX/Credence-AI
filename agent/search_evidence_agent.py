@@ -14,13 +14,19 @@ def search_evidence(state: AgentState) -> dict:
 
     evidence: dict[int, list[EvidenceSource]] = {}
 
+    # -----------------------------
+    # DOMAIN FILTERS
+    # -----------------------------
+    bad_domains = ["facebook", "instagram", "reddit", "yelp", "example.com"]
+
+    trusted_domains = ["bbc", "reuters", "who", "un", "gov", "nature", "apnews", "npr"]
+
     for claim_obj in state.claims:
         claim_text = claim_obj.claim
         claim_type = claim_obj.type
         confidence = claim_obj.confidence
 
-        # skip low confidence
-        if confidence < 0.3:
+        if confidence < 0.5:
             continue
 
         # -----------------------------
@@ -30,21 +36,17 @@ def search_evidence(state: AgentState) -> dict:
             queries = [
                 f"{claim_text} statistics",
                 f"{claim_text} official data",
-                f"{claim_text} report",
             ]
-
         elif claim_type == "temporal":
             queries = [
-                f"{claim_text} date event",
                 f"{claim_text} timeline",
+                f"{claim_text} date",
             ]
-
         elif claim_type == "entity":
             queries = [
                 f"{claim_text} who is",
                 f"{claim_text} details",
             ]
-
         else:
             queries = [
                 claim_text,
@@ -62,6 +64,12 @@ def search_evidence(state: AgentState) -> dict:
                 results = res.get("results", [])
 
                 for r in results:
+                    url = r.get("url", "")
+
+                    # ❌ FILTER BAD SOURCES
+                    if any(b in url for b in bad_domains):
+                        continue
+
                     r["query_used"] = q
                     all_results.append(r)
 
@@ -81,21 +89,23 @@ def search_evidence(state: AgentState) -> dict:
                 unique_results.append(r)
 
         # -----------------------------
-        # RANK
+        # RANKING (IMPROVED)
         # -----------------------------
         def score_result(r):
             score = 0
             content = (r.get("content") or "").lower()
             title = (r.get("title") or "").lower()
+            url = r.get("url") or ""
 
-            if claim_text.lower() in content:
+            # keyword match
+            if any(word in content for word in claim_text.lower().split()):
                 score += 1
-            if claim_text.lower() in title:
+            if any(word in title for word in claim_text.lower().split()):
                 score += 1
 
-            trusted = ["bbc", "reuters", "who", "un", "gov", "nature"]
-            if any(t in (r.get("url") or "") for t in trusted):
-                score += 2
+            # trusted domain boost
+            if any(t in url for t in trusted_domains):
+                score += 3
 
             return score
 
@@ -109,8 +119,9 @@ def search_evidence(state: AgentState) -> dict:
                 title=r.get("title", ""),
                 content=r.get("content", ""),
                 url=r.get("url", ""),
-                relevance_score=r.get("score"),
+                relevance_score=score_result(r),
                 query_used=r.get("query_used"),
+                credibility=1.0 if any(t in (r.get("url") or "") for t in trusted_domains) else 0.5
             )
             for r in ranked[:5]
         ]
