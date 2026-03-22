@@ -1,5 +1,4 @@
-
-from agent_state import AgentState, ClaimExtractionOutput, Claim, EvidenceSource, VerificationResult
+from agent_state import AgentState
 
 def generate_report(state: AgentState) -> dict:
     print("\n[Agent 4] Generating final report...")

@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
     initial_state = AgentState(
         input_text="""
-        Some online claims suggest that COVID-19 vaccines contain microchips used to track people, but this has been widely debunked by scientists and regulatory authorities. Another common myth is that 5G networks spread viruses, which has no scientific basis. It is also falsely claimed that drinking bleach can cure diseases, which is dangerous misinformation. Meanwhile, vaccines have been proven to reduce severe illness and save lives.
+        Bananas are radioactive due to the presence of potassium, but they are safe to eat. Goldfish have a memory span of only three seconds, which is a widely believed myth. Lightning never strikes the same place twice, although this is not true. The Amazon rainforest produces 20% of the world's oxygen, a claim often repeated but misleading in scientific context.
         """
     )
 

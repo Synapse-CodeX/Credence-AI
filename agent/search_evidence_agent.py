@@ -1,8 +1,4 @@
-from pydantic import BaseModel, Field
-from typing import List, Dict, Optional, Literal
-from langchain_openai import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
-from agent_state import AgentState, ClaimExtractionOutput, Claim, EvidenceSource, VerificationResult
+from agent_state import AgentState,  EvidenceSource
 import os
 from dotenv import load_dotenv   
 from tavily import TavilyClient
@@ -17,9 +13,9 @@ def search_evidence(state: AgentState) -> dict:
     # -----------------------------
     # DOMAIN FILTERS
     # -----------------------------
-    bad_domains = ["facebook", "instagram", "reddit", "yelp", "example.com"]
+    bad_domains = ["facebook", "instagram", "reddit", "yelp", "example.com", "twitter", "tiktok", "quora", "medium", "youtube", "pinterest", "tumblr", "vk", "weibo", "dailymotion", "flickr", "livejournal", "myspace"]
 
-    trusted_domains = ["bbc", "reuters", "who", "un", "gov", "nature", "apnews", "npr"]
+    trusted_domains = ["bbc", "reuters", "who", "un", "gov", "nature", "apnews", "npr", "wikipedia", "sciencedaily", "nih", "cdc", "nature", "sciencealert"]
 
     for claim_obj in state.claims:
         claim_text = claim_obj.claim
