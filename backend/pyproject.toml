@@ -11,6 +11,10 @@ dependencies = [
     "python-socketio",
     "openai",
     "beautifulsoup4",
+    "langchain",
+    "langchain-openai",
+    "langgraph",
+    "tavily-python",
 ]
 
 [tool.fastapi]

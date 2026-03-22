@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model_fast: str = "gpt-4o-mini"
     llm_model_reasoning: str = "gpt-4o"
+    openai_api_key: str = ""
 
     # Search
     tavily_api_key: str = ""
