@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const SAMPLES = {
   factcheck: [
@@ -20,16 +20,19 @@ export default function InputPanel({ onAnalyze, loading }) {
   const [fileName, setFileName] = useState(null);
   const fileInputRef = useRef(null);
 
+  const [vw, setVw] = useState(window.innerWidth);
+  useEffect(() => {
+    const handler = () => setVw(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  const isMobile = vw < 640;
+
   const readFile = (file) => {
     if (!file) return;
-    const allowed = ['text/plain', 'application/pdf', 'text/html',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/msword'];
-    // accept any text-ish file
     const reader = new FileReader();
     reader.onload = (e) => {
-      const content = e.target.result;
-      setText(content);
+      setText(e.target.result);
       setFileName(file.name);
     };
     reader.readAsText(file);
@@ -66,29 +69,42 @@ export default function InputPanel({ onAnalyze, loading }) {
   return (
     <div style={{ animation: 'fadeUp 0.4s ease both' }}>
 
-      {/* Mode selector cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+      {/* Mode selector — stacks on mobile */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+        gap: '10px',
+        marginBottom: '16px',
+      }}>
         {[
-          { id: 'factcheck', icon: '⚖', title: 'FACT CHECK', desc: 'Extract claims from text and verify each one against known sources with confidence scores.', color: 'var(--a1)', dimColor: 'var(--a1-dim)' },
-          { id: 'aidetect',  icon: '◈', title: 'AI DETECTION', desc: 'Analyze writing style, tone and structure to determine if text was written by AI or a human.', color: 'var(--cyan)', dimColor: 'var(--cyan-dim)' },
+          { id: 'factcheck', icon: '⚖', title: 'FACT CHECK', desc: 'Extract & verify claims against sources with confidence scores.', color: 'var(--a1)', dimColor: 'var(--a1-dim)' },
+          { id: 'aidetect', icon: '◈', title: 'AI DETECTION', desc: 'Analyze writing style to determine AI or human authorship.', color: 'var(--cyan)', dimColor: 'var(--cyan-dim)' },
         ].map(m => (
           <div key={m.id} onClick={() => setMode(m.id)} style={{
-            padding: '18px 20px',
+            padding: isMobile ? '14px 16px' : '18px 20px',
             border: `1px solid ${mode === m.id ? m.color : 'var(--line2)'}`,
             borderLeft: `3px solid ${mode === m.id ? m.color : 'var(--bg3)'}`,
             borderRadius: 'var(--radius-lg)',
             background: mode === m.id ? m.dimColor : 'var(--bg1)',
             cursor: 'pointer', transition: 'all 0.15s',
             boxShadow: mode === m.id ? `0 0 20px ${m.dimColor}` : 'none',
+            display: 'flex', alignItems: isMobile ? 'center' : 'flex-start',
+            flexDirection: isMobile ? 'row' : 'column',
+            gap: isMobile ? '12px' : '0',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '20px', color: m.color }}>{m.icon}</span>
-              <span style={{ fontFamily: 'var(--display)', fontSize: '18px', letterSpacing: '2px', color: mode === m.id ? m.color : 'var(--muted)' }}>{m.title}</span>
-              {mode === m.id && (
-                <div style={{ marginLeft: 'auto', width: '8px', height: '8px', borderRadius: '50%', background: m.color, boxShadow: `0 0 6px ${m.color}`, animation: 'pulse 1.5s ease infinite' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: isMobile ? 0 : '8px', flexShrink: 0 }}>
+              <span style={{ fontSize: '18px', color: m.color }}>{m.icon}</span>
+              <span style={{ fontFamily: 'var(--display)', fontSize: isMobile ? '16px' : '18px', letterSpacing: '2px', color: mode === m.id ? m.color : 'var(--muted)' }}>{m.title}</span>
+              {mode === m.id && !isMobile && (
+                <div style={{ marginLeft: 'auto', width: '7px', height: '7px', borderRadius: '50%', background: m.color, boxShadow: `0 0 6px ${m.color}`, animation: 'pulse 1.5s ease infinite' }} />
               )}
             </div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: mode === m.id ? 'var(--muted)' : 'var(--dim)', lineHeight: '1.6' }}>{m.desc}</div>
+            {!isMobile && (
+              <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: mode === m.id ? 'var(--muted)' : 'var(--dim)', lineHeight: '1.6' }}>{m.desc}</div>
+            )}
+            {isMobile && mode === m.id && (
+              <div style={{ marginLeft: 'auto', width: '7px', height: '7px', borderRadius: '50%', background: m.color, flexShrink: 0 }} />
+            )}
           </div>
         ))}
       </div>
@@ -110,56 +126,58 @@ export default function InputPanel({ onAnalyze, loading }) {
         {/* top bar */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 16px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)',
+          padding: isMobile ? '7px 12px' : '8px 16px',
+          background: 'var(--bg2)', borderBottom: '1px solid var(--line)',
           fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)',
+          gap: '8px', flexWrap: 'wrap',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ letterSpacing: '1px' }}>
-              // {mode === 'factcheck' ? 'PASTE OR UPLOAD TEXT TO FACT-CHECK' : 'PASTE OR UPLOAD TEXT TO ANALYZE'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+            <span style={{ letterSpacing: '0.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: isMobile ? '140px' : 'none' }}>
+              // {mode === 'factcheck' ? 'PASTE TEXT TO FACT-CHECK' : 'PASTE TEXT TO ANALYZE'}
             </span>
             {fileName && (
               <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
+                display: 'flex', alignItems: 'center', gap: '4px',
                 padding: '2px 8px', background: `${accentColor}18`,
                 border: `1px solid ${accentColor}44`, borderRadius: 'var(--radius)',
                 color: accentColor, fontSize: '9px', letterSpacing: '1px',
+                flexShrink: 0,
               }}>
-                <span>📄</span>{fileName}
-                <span
-                  onClick={() => { setText(''); setFileName(null); }}
-                  style={{ cursor: 'pointer', opacity: 0.6, marginLeft: '2px' }}
-                >✕</span>
+                📄 {fileName.length > 12 ? fileName.slice(0, 12) + '…' : fileName}
+                <span onClick={() => { setText(''); setFileName(null); }} style={{ cursor: 'pointer', opacity: 0.6, marginLeft: '2px' }}>✕</span>
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ color: 'var(--dim)' }}>{wc} words</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            <span style={{ color: 'var(--dim)', fontSize: '9px' }}>{wc}w</span>
             <button onClick={loadSample} style={{
               background: 'transparent', border: '1px solid var(--line2)',
-              color: 'var(--dim)', fontFamily: 'var(--mono)', fontSize: '10px',
-              padding: '3px 10px', cursor: 'pointer', borderRadius: 'var(--radius)',
-              letterSpacing: '1px', transition: 'all 0.15s',
+              color: 'var(--dim)', fontFamily: 'var(--mono)', fontSize: '9px',
+              padding: '2px 8px', cursor: 'pointer', borderRadius: 'var(--radius)',
+              letterSpacing: '0.5px', transition: 'all 0.15s', whiteSpace: 'nowrap',
             }}
               onMouseEnter={e => { e.target.style.borderColor = accentColor; e.target.style.color = accentColor; }}
               onMouseLeave={e => { e.target.style.borderColor = 'var(--line2)'; e.target.style.color = 'var(--dim)'; }}
-            >LOAD SAMPLE</button>
+            >SAMPLE</button>
           </div>
         </div>
 
-        {/* textarea with line numbers */}
+        {/* textarea — no line numbers on mobile */}
         <div style={{ display: 'flex' }}>
-          <div style={{
-            padding: '14px 10px', background: 'var(--bg0)',
-            borderRight: '1px solid var(--line)',
-            display: 'flex', flexDirection: 'column',
-            userSelect: 'none', minWidth: '36px',
-          }}>
-            {Array.from({ length: 9 }, (_, i) => (
-              <div key={i} style={{ fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--bg3)', lineHeight: '22.1px', textAlign: 'right' }}>
-                {i + 1}
-              </div>
-            ))}
-          </div>
+          {!isMobile && (
+            <div style={{
+              padding: '14px 10px', background: 'var(--bg0)',
+              borderRight: '1px solid var(--line)',
+              display: 'flex', flexDirection: 'column',
+              userSelect: 'none', minWidth: '36px',
+            }}>
+              {Array.from({ length: 9 }, (_, i) => (
+                <div key={i} style={{ fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--bg3)', lineHeight: '22.1px', textAlign: 'right' }}>
+                  {i + 1}
+                </div>
+              ))}
+            </div>
+          )}
           <textarea
             value={text}
             onChange={e => { setText(e.target.value); setFileName(null); }}
@@ -168,12 +186,12 @@ export default function InputPanel({ onAnalyze, loading }) {
               : mode === 'factcheck'
                 ? '  // paste article, essay, news — any text with factual claims...'
                 : '  // paste any text — article, email, essay — to detect AI authorship...'}
-            rows={9}
+            rows={isMobile ? 7 : 9}
             style={{
               flex: 1, background: 'var(--bg0)', border: 'none',
-              padding: '14px 16px', color: 'var(--text)',
+              padding: isMobile ? '12px 14px' : '14px 16px', color: 'var(--text)',
               fontSize: '13px', fontFamily: 'var(--mono)', lineHeight: '1.7',
-              resize: 'vertical', outline: 'none',
+              resize: 'vertical', outline: 'none', width: '100%',
             }}
           />
         </div>
@@ -181,18 +199,15 @@ export default function InputPanel({ onAnalyze, loading }) {
         {/* action bar */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 16px', background: 'var(--bg2)', borderTop: '1px solid var(--line)',
+          padding: isMobile ? '10px 12px' : '12px 16px',
+          background: 'var(--bg2)', borderTop: '1px solid var(--line)',
+          gap: '8px', flexWrap: 'wrap',
         }}>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)', letterSpacing: '1px' }}>
-            {dragOver
-              ? '↓ DROP FILE TO LOAD'
-              : canGo
-                ? `▶ READY — ${mode === 'factcheck' ? 'WILL EXTRACT & VERIFY CLAIMS' : 'WILL DETECT AI AUTHORSHIP'}`
-                : '// minimum 10 characters required'}
+          <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '0.5px', flex: 1 }}>
+            {dragOver ? '↓ DROP FILE' : canGo ? `▶ READY` : '// min 10 chars'}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
@@ -200,48 +215,36 @@ export default function InputPanel({ onAnalyze, loading }) {
               onChange={handleFileChange}
               style={{ display: 'none' }}
             />
-
-            {/* + upload button */}
             <button
               onClick={() => fileInputRef.current?.click()}
               title="Upload a text file"
               style={{
-                width: '38px', height: '38px',
+                width: '36px', height: '36px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'transparent',
-                border: `1px solid var(--line2)`,
+                background: 'transparent', border: `1px solid var(--line2)`,
                 borderRadius: 'var(--radius)',
                 color: 'var(--dim)', fontSize: '20px', lineHeight: 1,
-                cursor: 'pointer', transition: 'all 0.15s',
-                fontWeight: '300',
+                cursor: 'pointer', transition: 'all 0.15s', fontWeight: '300',
               }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = accentColor;
-                e.currentTarget.style.color = accentColor;
-                e.currentTarget.style.boxShadow = `0 0 10px ${accentGlow}`;
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'var(--line2)';
-                e.currentTarget.style.color = 'var(--dim)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = accentColor; e.currentTarget.style.color = accentColor; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line2)'; e.currentTarget.style.color = 'var(--dim)'; }}
             >+</button>
 
-            {/* Analyze button */}
             <button
               onClick={submit}
               disabled={!canGo}
               style={{
-                padding: '10px 36px',
+                padding: isMobile ? '9px 24px' : '10px 36px',
                 background: canGo ? accentColor : 'var(--bg3)',
                 border: 'none', borderRadius: 'var(--radius)',
                 color: canGo ? '#060a0f' : 'var(--dim)',
-                fontFamily: 'var(--display)', fontSize: '16px', letterSpacing: '3px',
+                fontFamily: 'var(--display)', fontSize: isMobile ? '14px' : '16px', letterSpacing: '2px',
                 cursor: canGo ? 'pointer' : 'not-allowed', transition: 'all 0.15s',
                 boxShadow: canGo ? `0 0 20px ${accentGlow}` : 'none',
+                whiteSpace: 'nowrap',
               }}
-              onMouseEnter={e => { if (canGo) { e.target.style.filter = 'brightness(1.15)'; e.target.style.boxShadow = `0 0 30px ${accentGlow}`; } }}
-              onMouseLeave={e => { if (canGo) { e.target.style.filter = 'none'; e.target.style.boxShadow = `0 0 20px ${accentGlow}`; } }}
+              onMouseEnter={e => { if (canGo) { e.target.style.filter = 'brightness(1.15)'; } }}
+              onMouseLeave={e => { if (canGo) { e.target.style.filter = 'none'; } }}
             >
               {loading ? 'PROCESSING...' : mode === 'factcheck' ? 'FACT CHECK' : 'DETECT AI'}
             </button>
@@ -249,10 +252,11 @@ export default function InputPanel({ onAnalyze, loading }) {
         </div>
       </div>
 
-      {/* drag hint */}
-      <div style={{ marginTop: '8px', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '1px', textAlign: 'right' }}>
-        + UPLOAD or DRAG & DROP .txt .md .html .csv files
-      </div>
+      {!isMobile && (
+        <div style={{ marginTop: '8px', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '1px', textAlign: 'right' }}>
+          + UPLOAD or DRAG & DROP .txt .md .html .csv files
+        </div>
+      )}
     </div>
   );
 }

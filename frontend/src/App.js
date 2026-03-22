@@ -36,7 +36,6 @@ function EmptyState({ message }) {
   );
 }
 
-// ── AI Detection full result panel ──────────────────────────────────────────
 function AIDetectionResult({ result }) {
   if (!result) return null;
   const isAI = result.verdict === 'LIKELY AI';
@@ -52,20 +51,21 @@ function AIDetectionResult({ result }) {
         borderLeft: `4px solid ${color}`,
         borderRadius: 'var(--radius-lg)',
         background: bgColor,
-        padding: '24px 28px',
-        display: 'flex', alignItems: 'center', gap: '24px',
+        padding: '20px',
+        display: 'flex', alignItems: 'center', gap: '16px',
+        flexWrap: 'wrap',
       }}>
-        <div style={{ textAlign: 'center', minWidth: '90px' }}>
-          <div style={{ fontFamily: 'var(--display)', fontSize: '56px', color, lineHeight: 1 }}>
+        <div style={{ textAlign: 'center', minWidth: '80px' }}>
+          <div style={{ fontFamily: 'var(--display)', fontSize: 'clamp(40px,8vw,56px)', color, lineHeight: 1 }}>
             {result.aiScore}
           </div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color, letterSpacing: '2px', marginTop: '2px' }}>
             % AI SCORE
           </div>
         </div>
-        <div style={{ width: '1px', height: '60px', background: `${color}44` }} />
-        <div>
-          <div style={{ fontFamily: 'var(--display)', fontSize: '32px', color, letterSpacing: '3px' }}>
+        <div style={{ width: '1px', height: '60px', background: `${color}44`, flexShrink: 0 }} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: 'var(--display)', fontSize: 'clamp(20px,4vw,32px)', color, letterSpacing: '3px' }}>
             {result.verdict}
           </div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)', marginTop: '6px' }}>
@@ -143,27 +143,34 @@ function AIDetectionResult({ result }) {
   );
 }
 
-// ── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const { isSignedIn, isLoaded } = useAuth();
-
   const [showLanding, setShowLanding] = useState(true);
 
-  // Auto-skip landing page if user is already signed in
   useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      setShowLanding(false);
-    }
+    if (isLoaded && isSignedIn) setShowLanding(false);
   }, [isLoaded, isSignedIn]);
 
   const [phase, setPhase] = useState('idle');
-  const [analysisMode, setAnalysisMode] = useState(null); // 'factcheck' | 'aidetect'
+  const [analysisMode, setAnalysisMode] = useState(null);
   const [pipelineStep, setPipelineStep] = useState(null);
   const [claims, setClaims] = useState([]);
   const [results, setResults] = useState([]);
   const [verifiedCount, setVerifiedCount] = useState(0);
   const [aiDetection, setAiDetection] = useState(null);
   const [error, setError] = useState(null);
+
+  // Responsive: track viewport width
+  const [vw, setVw] = useState(window.innerWidth);
+  useEffect(() => {
+    const handler = () => setVw(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
+  const isMobile = vw < 640;
+  const isTablet = vw >= 640 && vw < 1024;
+  const isDesktop = vw >= 1024;
 
   const handleAnalyze = async ({ mode, content }) => {
     try {
@@ -186,12 +193,9 @@ export default function App() {
           await sleep(300);
         }
         setPipelineStep('report');
-        // AI detection runs as part of factcheck too
         const aiResult = await detectAIContent(content);
         setAiDetection(aiResult);
-
       } else {
-        // AI detection only mode — single call
         setPipelineStep('extract');
         await sleep(500);
         setPipelineStep('verify');
@@ -215,47 +219,65 @@ export default function App() {
 
   const isLoading = phase === 'running';
 
-  // Loading spinner while Clerk initialises
   if (!isLoaded) return (
-    <div style={{ minHeight:'100vh', background:'var(--bg0)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div style={{ width:'32px', height:'32px', borderRadius:'50%', border:'2px solid var(--a1)', borderTopColor:'transparent', animation:'spin 0.8s linear infinite' }} />
+    <div style={{ minHeight: '100vh', background: 'var(--bg0)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid var(--a1)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
     </div>
   );
 
-  // Show landing page on first visit (auto-skipped if already signed in via useEffect)
-  if (showLanding) return (
-    <LandingPage
-      onEnter={() => setShowLanding(false)}
-      isSignedIn={isSignedIn}
-    />
-  );
-
-  // Show auth page if not signed in — on success Clerk updates isSignedIn
-  // which triggers useEffect above and setShowLanding(false) skips back here
+  if (showLanding) return <LandingPage onEnter={() => setShowLanding(false)} isSignedIn={isSignedIn} />;
   if (!isSignedIn) return <AuthPage />;
+
+  // Dashboard layout config
+  const dashboardGrid = isDesktop
+    ? '220px 1fr 250px'
+    : isTablet
+      ? '1fr'
+      : '1fr';
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
       <Background />
       <Header onBackToLanding={() => setShowLanding(true)} />
 
-      <main style={{ position: 'relative', zIndex: 1, maxWidth: '1280px', margin: '0 auto', padding: '32px 28px 80px' }}>
+      <main style={{
+        position: 'relative', zIndex: 1,
+        maxWidth: '1280px', margin: '0 auto',
+        padding: isMobile ? '16px 14px 60px' : isTablet ? '24px 20px 80px' : '32px 28px 80px',
+      }}>
 
         {/* HERO */}
         {phase === 'idle' && (
-          <div style={{ marginBottom: '36px', animation: 'fadeUp 0.5s ease both' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ marginBottom: '28px', animation: 'fadeUp 0.5s ease both' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: isMobile ? 'flex-start' : 'flex-end',
+              justifyContent: 'space-between',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: '16px', marginBottom: '20px',
+            }}>
               <div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)', letterSpacing: '3px', marginBottom: '10px' }}>
                   // INTELLIGENCE VERIFICATION PLATFORM
                 </div>
-                <h1 style={{ fontFamily: 'var(--display)', fontSize: 'clamp(48px,7vw,90px)', letterSpacing: '4px', lineHeight: 0.9, color: 'var(--text)' }}>
+                <h1 style={{
+                  fontFamily: 'var(--display)',
+                  fontSize: isMobile ? 'clamp(42px,12vw,64px)' : 'clamp(48px,7vw,90px)',
+                  letterSpacing: '4px', lineHeight: 0.9, color: 'var(--text)',
+                }}>
                   FACT<br />
                   <span style={{ color: 'var(--a1)' }}>CHECK</span>
-                  <span style={{ fontSize: 'clamp(24px,3.5vw,44px)', color: 'var(--dim)', marginLeft: '16px', letterSpacing: '2px' }}>ENGINE</span>
+                  <span style={{ fontSize: isMobile ? 'clamp(18px,5vw,28px)' : 'clamp(24px,3.5vw,44px)', color: 'var(--dim)', marginLeft: '12px', letterSpacing: '2px' }}>ENGINE</span>
                 </h1>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', maxWidth: '340px' }}>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '8px',
+                width: isMobile ? '100%' : '340px',
+                maxWidth: isMobile ? '100%' : '340px',
+              }}>
                 {[
                   { label: 'FACT CHECK', val: 'CLAIMS', color: 'var(--a1)' },
                   { label: 'AI DETECTION', val: 'AUTHORSHIP', color: 'var(--cyan)' },
@@ -264,12 +286,12 @@ export default function App() {
                 ].map(s => (
                   <div key={s.label} style={{ padding: '10px 14px', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', background: 'var(--bg1)' }}>
                     <div style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--dim)', letterSpacing: '1.5px', marginBottom: '4px' }}>{s.label}</div>
-                    <div style={{ fontFamily: 'var(--display)', fontSize: '18px', color: s.color, letterSpacing: '2px' }}>{s.val}</div>
+                    <div style={{ fontFamily: 'var(--display)', fontSize: '16px', color: s.color, letterSpacing: '2px' }}>{s.val}</div>
                   </div>
                 ))}
               </div>
             </div>
-            <div style={{ height: '1px', background: 'var(--line2)', marginBottom: '28px' }} />
+            <div style={{ height: '1px', background: 'var(--line2)', marginBottom: '24px' }} />
           </div>
         )}
 
@@ -277,10 +299,11 @@ export default function App() {
         {phase !== 'idle' && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '10px 16px', marginBottom: '24px',
+            flexWrap: 'wrap', gap: '10px',
+            padding: isMobile ? '8px 12px' : '10px 16px', marginBottom: '20px',
             border: '1px solid var(--line2)', borderRadius: 'var(--radius)', background: 'var(--bg1)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               {isLoading
                 ? <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '2px solid var(--a1)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
                 : <span style={{ color: 'var(--green)' }}>✓</span>}
@@ -293,18 +316,18 @@ export default function App() {
                   borderRadius: 'var(--radius)', fontFamily: 'var(--mono)', fontSize: '9px',
                   color: analysisMode === 'factcheck' ? 'var(--a1)' : 'var(--cyan)', letterSpacing: '1px',
                 }}>
-                  {analysisMode === 'factcheck' ? 'FACT CHECK MODE' : 'AI DETECTION MODE'}
+                  {analysisMode === 'factcheck' ? 'FACT CHECK' : 'AI DETECT'}
                 </div>
               )}
             </div>
             <button onClick={handleReset} style={{
-              padding: '6px 16px', background: 'transparent', border: '1px solid var(--line2)',
+              padding: '6px 14px', background: 'transparent', border: '1px solid var(--line2)',
               borderRadius: 'var(--radius)', color: 'var(--dim)', fontFamily: 'var(--mono)',
               fontSize: '10px', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s',
             }}
               onMouseEnter={e => { e.target.style.borderColor = 'var(--a1)'; e.target.style.color = 'var(--a1)'; }}
               onMouseLeave={e => { e.target.style.borderColor = 'var(--line2)'; e.target.style.color = 'var(--dim)'; }}
-            >↩ NEW ANALYSIS</button>
+            >↩ NEW</button>
           </div>
         )}
 
@@ -328,15 +351,31 @@ export default function App() {
 
         {/* DASHBOARD */}
         {(phase === 'running' || phase === 'done') && (
-          <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 260px', gap: '20px', alignItems: 'start' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isDesktop ? '220px 1fr 250px' : '1fr',
+            gap: isMobile ? '16px' : '20px',
+            alignItems: 'start',
+          }}>
 
-            {/* LEFT — pipeline */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '20px' }}>
-              <SectionLabel color="var(--cyan)">PIPELINE</SectionLabel>
-              <Pipeline currentStep={phase === 'done' ? 'report' : pipelineStep} claimCount={claims.length} verifiedCount={verifiedCount} />
+            {/* LEFT — pipeline (shown first on mobile in a horizontal-scroll or full-width) */}
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: '12px',
+              position: isDesktop ? 'sticky' : 'relative',
+              top: isDesktop ? '20px' : 'auto',
+              order: isMobile ? 1 : 0,
+            }}>
+              {!isMobile && <SectionLabel color="var(--cyan)">PIPELINE</SectionLabel>}
 
-              {/* claim index only for factcheck */}
-              {analysisMode === 'factcheck' && claims.length > 0 && (
+              {/* On mobile, show pipeline as a compact horizontal stepper */}
+              {isMobile ? (
+                <MobilePipelineStepper currentStep={phase === 'done' ? 'report' : pipelineStep} claimCount={claims.length} verifiedCount={verifiedCount} />
+              ) : (
+                <Pipeline currentStep={phase === 'done' ? 'report' : pipelineStep} claimCount={claims.length} verifiedCount={verifiedCount} />
+              )}
+
+              {/* claim index — hide on mobile */}
+              {!isMobile && analysisMode === 'factcheck' && claims.length > 0 && (
                 <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', background: 'var(--bg1)', overflow: 'hidden' }}>
                   <div style={{ padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>
                     CLAIM INDEX
@@ -360,7 +399,7 @@ export default function App() {
             </div>
 
             {/* CENTER — results */}
-            <div>
+            <div style={{ order: isMobile ? 2 : 0, minWidth: 0 }}>
               {analysisMode === 'factcheck' ? (
                 <>
                   <SectionLabel>EXTRACTED CLAIMS</SectionLabel>
@@ -392,8 +431,13 @@ export default function App() {
               )}
             </div>
 
-            {/* RIGHT — summary report (factcheck only) */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '20px' }}>
+            {/* RIGHT — summary report */}
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: '16px',
+              position: isDesktop ? 'sticky' : 'relative',
+              top: isDesktop ? '20px' : 'auto',
+              order: isMobile ? 3 : 0,
+            }}>
               {analysisMode === 'factcheck' && (
                 <>
                   <SectionLabel color="var(--a1)">REPORT</SectionLabel>
@@ -427,6 +471,65 @@ export default function App() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+// ── Compact mobile pipeline stepper ──────────────────────────────────────
+const STEP_LABELS = ['EXTRACT', 'SEARCH', 'VERIFY', 'REPORT'];
+const STEP_IDS = ['extract', 'search', 'verify', 'report'];
+
+function MobilePipelineStepper({ currentStep, claimCount, verifiedCount }) {
+  const currentIdx = STEP_IDS.indexOf(currentStep);
+  const allDone = currentStep === 'report';
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center',
+      background: 'var(--bg1)', border: '1px solid var(--line2)',
+      borderRadius: 'var(--radius-lg)', padding: '12px 14px',
+      gap: '4px', overflow: 'hidden',
+    }}>
+      {STEP_IDS.map((id, i) => {
+        const done = allDone || i < currentIdx;
+        const active = !allDone && i === currentIdx;
+        const color = done ? 'var(--green)' : active ? 'var(--a1)' : 'var(--bg3)';
+        return (
+          <React.Fragment key={id}>
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+              flex: active ? 2 : 1, transition: 'flex 0.3s ease',
+            }}>
+              <div style={{
+                width: '22px', height: '22px', borderRadius: '50%',
+                border: `1.5px solid ${color}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: active ? 'rgba(240,180,41,0.1)' : done ? 'rgba(0,232,135,0.08)' : 'transparent',
+                flexShrink: 0,
+              }}>
+                {done
+                  ? <span style={{ color: 'var(--green)', fontSize: '10px' }}>✓</span>
+                  : active
+                    ? <div style={{ width: '10px', height: '10px', borderRadius: '50%', border: '1.5px solid var(--a1)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+                    : <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)' }}>{i + 1}</span>
+                }
+              </div>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: '8px', color, letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+                {active && id === 'verify' && claimCount > 0
+                  ? `${verifiedCount}/${claimCount}`
+                  : STEP_LABELS[i]}
+              </span>
+            </div>
+            {i < STEP_IDS.length - 1 && (
+              <div style={{
+                height: '1px', flex: 1,
+                background: i < currentIdx ? 'var(--green)' : 'var(--line)',
+                transition: 'background 0.5s',
+              }} />
+            )}
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 }
