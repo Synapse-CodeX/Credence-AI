@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import LandingPage from './components/LandingPage';
 import Background from './components/Background';
 import Header from './components/Header';
 import InputPanel from './components/InputPanel';
@@ -146,6 +147,15 @@ function AIDetectionResult({ result }) {
 export default function App() {
   const { isSignedIn, isLoaded } = useAuth();
 
+  const [showLanding, setShowLanding] = useState(true);
+
+  // Auto-skip landing page if user is already signed in
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      setShowLanding(false);
+    }
+  }, [isLoaded, isSignedIn]);
+
   const [phase, setPhase] = useState('idle');
   const [analysisMode, setAnalysisMode] = useState(null); // 'factcheck' | 'aidetect'
   const [pipelineStep, setPipelineStep] = useState(null);
@@ -205,18 +215,29 @@ export default function App() {
 
   const isLoading = phase === 'running';
 
-  // Auth gate
+  // Loading spinner while Clerk initialises
   if (!isLoaded) return (
     <div style={{ minHeight:'100vh', background:'var(--bg0)', display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ width:'32px', height:'32px', borderRadius:'50%', border:'2px solid var(--a1)', borderTopColor:'transparent', animation:'spin 0.8s linear infinite' }} />
     </div>
   );
+
+  // Show landing page on first visit (auto-skipped if already signed in via useEffect)
+  if (showLanding) return (
+    <LandingPage
+      onEnter={() => setShowLanding(false)}
+      isSignedIn={isSignedIn}
+    />
+  );
+
+  // Show auth page if not signed in — on success Clerk updates isSignedIn
+  // which triggers useEffect above and setShowLanding(false) skips back here
   if (!isSignedIn) return <AuthPage />;
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
       <Background />
-      <Header />
+      <Header onBackToLanding={() => setShowLanding(true)} />
 
       <main style={{ position: 'relative', zIndex: 1, maxWidth: '1280px', margin: '0 auto', padding: '32px 28px 80px' }}>
 
