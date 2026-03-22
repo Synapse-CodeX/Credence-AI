@@ -174,7 +174,11 @@ export default function ClaimCard({ claim, result, index, loading }) {
                     borderRadius: 'var(--radius)',
                     lineHeight: '1.5',
                     wordBreak: 'break-all',
-                  }}>
+                    transition: 'border-color 0.2s',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor='rgba(0,212,255,0.35)'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor='rgba(0,212,255,0.12)'}
+                  >
                     <span style={{ color: 'var(--dim)', flexShrink: 0, fontWeight: '500' }}>#{String(i + 1).padStart(2, '0')}</span>
                     <span>{s}</span>
                   </div>
