@@ -39,12 +39,34 @@ export async function startVerification(reqPayload, onProgress, onComplete, onEr
             try {
               const parsed = JSON.parse(dataStr);
               if (parsed.step === "pipeline_complete") {
-                // The backend sends the report object directly in the 'data' field
-                onComplete(parsed.data);
+                // Map the backend Report so it merges claims & verdicts for the UI
+                const report = parsed.data;
+                const mergedClaims = (report.claims || []).map(c => {
+                  const v = (report.verdicts || []).find(x => x.claim_id === c.id) || {};
+                  return {
+                    id: c.id,
+                    claim: c.text,
+                    context: c.context || "",
+                    verdict: v.verdict || "UNVERIFIABLE",
+                    confidence: v.confidence_score !== undefined ? v.confidence_score : 0,
+                    explanation: v.reasoning || "",
+                    sources: v.cited_sources || [],
+                    searchQuery: v.search_query || "",
+                    conflicting: v.conflicting || false,
+                    timeSensitive: v.time_sensitive || false,
+                    difficulty: v.difficulty || "MEDIUM",
+                    tavilyAnswer: v.tavily_answer || ""
+                  };
+                });
+
+                onComplete({ ...report, claims: mergedClaims, verified_claims: mergedClaims });
               } else if (parsed.step === "error") {
                 onError(parsed.data.error || "Unknown pipeline error");
               } else {
-                // Pass the whole step info to onProgress as App.js expects it
+                // If it's an intermediate step sending verdicts, map it to verified_claims
+                if (parsed.data && parsed.data.verdicts) {
+                  parsed.data.verified_claims = parsed.data.verdicts;
+                }
                 onProgress(parsed);
               }
             } catch (e) {
@@ -76,15 +98,14 @@ export async function checkAIText(text) {
   }
   const data = await response.json();
 
-  // Map backend AITextResult to what the frontend expects
   return {
     aiDetection: {
       aiScore: Math.round(data.ai_probability * 100),
       humanScore: Math.round((1 - data.ai_probability) * 100),
       verdict: data.verdict === "AI" ? "LIKELY AI" : data.verdict === "Human" ? "LIKELY HUMAN" : "MIXED",
-      signals: data.signals.map(s => JSON.stringify(s)), // Optionally format signals nicer
+      signals: data.signals.map(s => JSON.stringify(s)),
     },
-    bias: null // Backend doesn't currently do bias in this endpoint
+    bias: null
   };
 }
 
@@ -112,4 +133,53 @@ export async function checkAIImage(file) {
     },
     bias: null
   };
+}
+
+// ─── Legacy Wrapper for App.js ──────────────────────────────────────────────
+export function analyzeAll(content) {
+  return new Promise((resolve, reject) => {
+    startVerification(
+      { text: content },
+      (progress) => { /* ignore SSE progress */ },
+      (data) => {
+        const report = data.report || data;
+
+        const mappedClaims = (report.claims || []).map(c => {
+          const v = (report.verdicts || []).find(x => x.claim_id === c.id) || {};
+          return {
+            id: c.id,
+            claim: c.text,
+            context: c.context || "",
+            verdict: v.verdict || "UNVERIFIABLE",
+            confidence: v.confidence_score || 0,
+            explanation: v.reasoning || "",
+            sources: v.cited_sources || [],
+            searchQuery: "",
+            conflicting: false,
+            timeSensitive: false,
+            difficulty: ""
+          };
+        });
+
+        let aiDetection = null;
+        if (report.ai_text_result) {
+          const ai = report.ai_text_result;
+          aiDetection = {
+            aiScore: Math.round((ai.ai_probability || 0) * 100),
+            humanScore: Math.round((1 - (ai.ai_probability || 0)) * 100),
+            verdict: ai.verdict === "AI" ? "LIKELY AI" : ai.verdict === "Human" ? "LIKELY HUMAN" : "MIXED",
+            signals: (ai.signals || []).map(s => typeof s === 'string' ? s : JSON.stringify(s))
+          };
+        }
+
+        resolve({
+          claims: mappedClaims,
+          aiDetection: aiDetection,
+          bias: null
+        });
+      },
+      (error) => reject(new Error(error)),
+      null
+    );
+  });
 }

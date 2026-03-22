@@ -47,7 +47,7 @@ function ConfidenceHeatmap({ claims, results }) {
   );
 }
 
-export default function SummaryReport({ claims, results, aiDetection }) {
+export default function SummaryReport({ claims, results, aiDetection, onDownload, onShare }) {
   const counts = { TRUE: 0, 'PARTIALLY TRUE': 0, FALSE: 0, UNVERIFIABLE: 0 };
   results.forEach(r => { if (r && counts[r.verdict] !== undefined) counts[r.verdict]++; });
   const total = results.filter(Boolean).length;
@@ -62,7 +62,16 @@ export default function SummaryReport({ claims, results, aiDetection }) {
           <div style={{ width: '3px', height: '16px', background: 'var(--a1)' }} />
           <span style={{ fontFamily: 'var(--display)', fontSize: '14px', letterSpacing: '2px', color: 'var(--a1)' }}>ACCURACY REPORT</span>
         </div>
-        <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', padding: '3px 8px', border: '1px solid var(--line)', letterSpacing: '1px' }}>{total} CLAIMS</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {onDownload && (
+            <button onClick={onDownload} style={{ padding: '4px 10px', background: 'var(--bg3)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', color: 'var(--cyan)', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.4)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg3)'; e.currentTarget.style.borderColor = 'var(--line)'; }}>↓ DL</button>
+          )}
+          {onShare && (
+            <button onClick={onShare} style={{ padding: '4px 10px', background: 'var(--bg3)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', color: 'var(--green)', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,232,135,0.08)'; e.currentTarget.style.borderColor = 'rgba(0,232,135,0.4)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg3)'; e.currentTarget.style.borderColor = 'var(--line)'; }}>⬡ SHARE</button>
+          )}
+          <div style={{ width: '1px', height: '16px', background: 'var(--line)' }} />
+          <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', padding: '3px 8px', border: '1px solid var(--line)', letterSpacing: '1px' }}>{total} CLAIMS</div>
+        </div>
       </div>
 
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>

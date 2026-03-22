@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import LandingPage from './components/LandingPage';
 import Background from './components/Background';
 import Header from './components/Header';
@@ -12,7 +11,8 @@ import HistoryPanel from './components/HistoryPanel';
 import ClaimHighlight from './components/ClaimHighlight';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import AuthPage from './components/AuthPage';
-import { startVerification, checkAIText, checkAIImage, connectToSession } from './services/api';
+import { startVerification, checkAIText, checkAIImage } from './services/api';
+import LiveFactCheck from './components/LiveFactCheck';
 import { downloadReport } from './services/downloadReport';
 import { saveAnalysis, getHistory } from './services/history';
 
@@ -93,13 +93,96 @@ function AIDetectionResult({ result }) {
   );
 }
 
-export default function App() {
-  const { isLoaded } = useAuth();
-  const { user } = useUser();
-  const { isSignedIn } = useAuth();
-  const userId = user?.id || 'test_user';
+// ── Image AI Detection Result ──────────────────────────────────────────────
+function ImageAIResult({ result, previewUrl }) {
+  if (!result) return null;
+  const isAI = result.verdict?.includes('AI');
+  const isReal = result.verdict?.includes('REAL');
+  const color = isAI ? 'var(--red)' : isReal ? 'var(--green)' : 'var(--orange)';
+  const bg = isAI ? 'var(--red-dim)' : isReal ? 'var(--green-dim)' : 'var(--orange-dim)';
 
-  const navigate = useNavigate();
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', animation: 'fadeUp 0.4s ease both' }}>
+      {/* Image preview */}
+      {previewUrl && (
+        <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: 'var(--bg1)' }}>
+          <div style={{ padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>ANALYZED IMAGE</div>
+          <div style={{ padding: '12px', display: 'flex', justifyContent: 'center' }}>
+            <img src={previewUrl} alt="Analyzed" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: 'var(--radius)', border: `1px solid ${color}44` }} />
+          </div>
+        </div>
+      )}
+
+      {/* Verdict banner */}
+      <div style={{ padding: '20px 24px', border: `1px solid ${color}`, borderLeft: `4px solid ${color}`, borderRadius: 'var(--radius-lg)', background: bg, display: 'flex', alignItems: 'center', gap: '20px' }}>
+        <div style={{ textAlign: 'center', minWidth: '80px' }}>
+          <div style={{ fontFamily: 'var(--display)', fontSize: '48px', color, lineHeight: 1 }}>{result.aiScore}</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color, letterSpacing: '2px', marginTop: '2px' }}>% AI SCORE</div>
+        </div>
+        <div style={{ width: '1px', height: '50px', background: `${color}44` }} />
+        <div>
+          <div style={{ fontFamily: 'var(--display)', fontSize: '22px', color, letterSpacing: '2px', marginBottom: '4px' }}>{result.verdict}</div>
+          {result.tool && result.tool !== 'UNKNOWN' && (
+            <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--muted)', letterSpacing: '1px' }}>
+              Suspected tool: <span style={{ color }}>{result.tool}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Score bars */}
+      <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', background: 'var(--bg1)', overflow: 'hidden' }}>
+        <div style={{ padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>CONFIDENCE SCORES</div>
+        <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {[{ label: 'AI-GENERATED', value: result.aiScore, color: 'var(--red)' }, { label: 'AUTHENTIC', value: result.humanScore, color: 'var(--green)' }].map(s => (
+            <div key={s.label}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--mono)', fontSize: '10px', color: s.color, marginBottom: '5px', letterSpacing: '1px' }}>
+                <span>{s.label}</span><span>{s.value}%</span>
+              </div>
+              <div style={{ height: '5px', background: 'var(--bg3)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${s.value}%`, background: s.color, borderRadius: '3px', boxShadow: `0 0 8px ${s.color}`, transition: 'width 1.2s ease' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Summary */}
+      {result.summary && (
+        <div style={{ padding: '12px 14px', background: 'var(--bg1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--muted)', lineHeight: '1.7' }}>
+          {result.summary}
+        </div>
+      )}
+
+      {/* Signals */}
+      {result.signals?.length > 0 && (
+        <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', background: 'var(--bg1)', overflow: 'hidden' }}>
+          <div style={{ padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>DETECTED SIGNALS</div>
+          <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {result.signals.map((s, i) => (
+              <div key={i} style={{ display: 'flex', gap: '10px', padding: '8px 12px', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)' }}>
+                <span style={{ color, flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>{s}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function App() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const { user } = useUser();
+  // Use a stable userId — always 'guest' until Clerk confirms identity
+  const userId = user?.id || 'guest';
+
+  const [showLanding, setShowLanding] = useState(true);
+
+  // Auto-skip landing if already signed in
+  useEffect(() => {
+    if (isLoaded && isSignedIn) setShowLanding(false);
+  }, [isLoaded, isSignedIn]);
 
   // Core analysis state
   const [phase, setPhase] = useState('idle');
@@ -110,10 +193,13 @@ export default function App() {
   const [verifiedCount, setVerifiedCount] = useState(0);
   const [aiDetection, setAiDetection] = useState(null);
   const [biasData, setBiasData] = useState(null);
+  const [imageResult, setImageResult] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [showLive, setShowLive] = useState(false);
   const [error, setError] = useState(null);
   const [inputText, setInputText] = useState('');
-  const [progressMsg, setProgressMsg] = useState('CONNECTING TO ENGINE...');
-  const abortControllerRef = React.useRef(null);
 
   // History state — use a ref so refreshHistory always uses latest userId
   const [history, setHistory] = useState([]);
@@ -129,145 +215,204 @@ export default function App() {
   // Load history whenever userId changes (after Clerk loads)
   useEffect(() => { refreshHistory(); }, [userId, refreshHistory]);
 
-  const handleAnalyze = async ({ mode, content, imageFile }) => {
+  const handleAnalyze = async (data) => {
+    const { mode, content, imageBase64, imageMime, imageName, imageFile } = data;
+    const abortController = new AbortController();
+
     try {
-      // Clean up any existing stream
-      if (abortControllerRef.current) { abortControllerRef.current.abort(); abortControllerRef.current = null; }
       setPhase('running'); setAnalysisMode(mode); setError(null);
       setClaims([]); setResults([]); setVerifiedCount(0);
-      setAiDetection(null); setBiasData(null); setInputText(content || (imageFile ? imageFile.name : ''));
-      setProgressMsg('CONNECTING TO ENGINE...');
+      setAiDetection(null); setBiasData(null);
+      setImageResult(null); setImagePreviewUrl(null);
+      setInputText(content || '');
 
-      if (mode === 'factcheck') {
-        const isUrl = content.startsWith('http://') || content.startsWith('https://');
-        const reqPayload = isUrl ? { url: content, user_id: userId } : { text: content, user_id: userId };
-
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
-
-        // Connect to session and stream progress natively via fetch
-        startVerification(
-          reqPayload,
-          (progressInfo) => {
-            const { step, status, data } = progressInfo;
-            
-            // Map backend steps to frontend pipeline steps
-            if (step === 'scraping') {
-              setPipelineStep('extract');
-              if (status === 'started' && data.message) setProgressMsg(data.message.toUpperCase());
-              else if (status === 'completed') setProgressMsg(`SCRAPED ${data.char_count} CHARACTERS...`);
-            }
-            if (step === 'extracting') {
-              setPipelineStep('extract');
-              if (status === 'started' && data.message) setProgressMsg(data.message.toUpperCase());
-            }
-            if (step === 'searching') {
-              setPipelineStep('search');
-              if (status === 'started' && data.message) setProgressMsg(data.message.toUpperCase());
-              else if (status === 'completed') setProgressMsg(`ANALYZED ${data.total_sources || 0} SOURCES...`);
-            }
-            if (step === 'verifying') {
-              setPipelineStep('verify');
-              if (status === 'started' && data.message) setProgressMsg(data.message.toUpperCase());
-            }
-            if (step === 'reporting') {
-              setPipelineStep('report');
-              if (status === 'started' && data.message) setProgressMsg(data.message.toUpperCase());
-            }
-            
-            if (status === 'completed' && step === 'extracting' && data.claims) {
-               setClaims(data.claims.map((claimText, idx) => ({ id: idx, claim: claimText, context: '' })));
-            }
-            if (status === 'completed' && step === 'scraping') {
-               setInputText(`[Scraped URL] ${content}`);
-            }
-
-          },
-          (report) => {
-            // Complete
-            setPipelineStep('report');
-            setPhase('done');
-
-            // map backend report to frontend models
-            if (report.claims) {
-               setClaims(report.claims.map(c => ({ id: c.id, claim: c.text, context: c.context || '' })));
-            }
-            if (report.verdicts) {
-               setResults(report.verdicts.map(v => ({
-                  verdict: v.verdict === "PARTIALLY_TRUE" ? "PARTIALLY TRUE" : v.verdict,
-                  confidence: v.confidence_score,
-                  explanation: v.reasoning,
-                  sources: v.cited_sources || [],
-               })));
-               setVerifiedCount(report.verdicts.length);
-            }
-            if (report.ai_text_result) {
-               setAiDetection({
-                  aiScore: Math.round(report.ai_text_result.ai_probability * 100),
-                  humanScore: Math.round((1 - report.ai_text_result.ai_probability) * 100),
-                  verdict: report.ai_text_result.verdict === "AI" ? "LIKELY AI" : report.ai_text_result.verdict === "Human" ? "LIKELY HUMAN" : "MIXED",
-                  signals: report.ai_text_result.signals.map(s => typeof s === 'string' ? s : JSON.stringify(s))
-               });
-            }
-
-            // Save to history
-            if (report.verdicts && report.verdicts.length > 0) {
-              const verdictsCounts = { TRUE: 0, 'PARTIALLY TRUE': 0, FALSE: 0, UNVERIFIABLE: 0 };
-              report.verdicts.forEach(c => { 
-                  const v = c.verdict === "PARTIALLY_TRUE" ? "PARTIALLY TRUE" : c.verdict;
-                  if (verdictsCounts[v] !== undefined) verdictsCounts[v]++; 
-              });
-              const accuracyScore = Math.round(((verdictsCounts.TRUE + verdictsCounts['PARTIALLY TRUE'] * 0.5) / report.verdicts.length) * 100);
-              saveAnalysis(userIdRef.current, {
-                mode: 'factcheck',
-                snippet: content.slice(0, 60) + (content.length > 60 ? '...' : ''),
-                accuracyScore,
-                verdicts: verdictsCounts,
-                claimCount: report.verdicts.length,
-              });
-              refreshHistory();
-            }
-          },
-          (errMsg) => {
-            setError(errMsg);
-            setPhase('error');
-          },
-          controller.signal
-        );
-
-      } else {
-        // AI detection mode
+      // ── IMAGE AI DETECTION ─────────────────────────────────────────────
+      if (imageFile && mode === 'aidetect') {
+        setPipelineStep('extract'); await sleep(400);
         setPipelineStep('verify');
-        let analysis;
-        if (imageFile) {
-          analysis = await checkAIImage(imageFile);
-        } else {
-          analysis = await checkAIText(content);
-        }
+        // checkAIImage expects a File object
+        const imgResult = await checkAIImage(imageFile);
+        // imgResult has { aiDetection: { aiScore, humanScore, verdict, signals } }
+        setImageResult({
+          aiScore: imgResult.aiDetection.aiScore,
+          humanScore: imgResult.aiDetection.humanScore,
+          verdict: imgResult.aiDetection.verdict === 'LIKELY AI' ? 'LIKELY AI GENERATED' : imgResult.aiDetection.verdict === 'LIKELY HUMAN' ? 'LIKELY REAL' : 'UNCERTAIN',
+          tool: 'SightEngine',
+          signals: imgResult.aiDetection.signals || [],
+          summary: `AI probability: ${imgResult.aiDetection.aiScore}%. ${imgResult.aiDetection.verdict}.`,
+        });
+        setImagePreviewUrl(URL.createObjectURL(imageFile));
+        setPipelineStep('report');
+        saveAnalysis(userIdRef.current, {
+          mode: 'aidetect',
+          snippet: `[IMAGE] ${imageName || 'uploaded image'}`,
+          aiScore: imgResult.aiDetection.aiScore,
+          verdict: imgResult.aiDetection.verdict,
+        });
+        refreshHistory();
+        setPhase('done');
+        return;
+      }
+
+      // ── TEXT AI DETECTION ──────────────────────────────────────────────
+      if (mode === 'aidetect') {
+        setPipelineStep('extract'); await sleep(500);
+        setPipelineStep('verify');
+        // checkAIText expects plain text string
+        const analysis = await checkAIText(content);
         setAiDetection(analysis.aiDetection);
         setBiasData(analysis.bias);
         setPipelineStep('report');
-        setPhase('done');
-
         saveAnalysis(userIdRef.current, {
           mode: 'aidetect',
-          snippet: content ? (content.slice(0, 60) + (content.length > 60 ? '...' : '')) : `[Image: ${imageFile?.name}]`,
+          snippet: content.slice(0, 60) + (content.length > 60 ? '...' : ''),
           aiScore: analysis.aiDetection.aiScore,
           verdict: analysis.aiDetection.verdict,
         });
         refreshHistory();
+        setPhase('done');
+        return;
       }
+
+      // ── FACT CHECK — SSE Stream via startVerification ──────────────────
+      if (mode === 'factcheck') {
+        const reqPayload = { text: content };
+
+        await startVerification(
+          reqPayload,
+          // onProgress — maps SSE step events to pipeline UI
+          (stepData) => {
+            const step = stepData.step;
+            if (step === 'claim_extraction' || step === 'extracting')  setPipelineStep('extract');
+            if (step === 'evidence_retrieval' || step === 'searching') setPipelineStep('search');
+            if (step === 'verification' || step === 'verifying')       setPipelineStep('verify');
+            if (step === 'report_generation' || step === 'reporting')  setPipelineStep('report');
+
+            // If step carries partial claims, show them
+            if (stepData.data?.claims) {
+              const partial = stepData.data.claims;
+              const claimsOnly = partial.map((c, i) => ({ id: i + 1, claim: c.claim || c.text || c, context: c.context || '' }));
+              setClaims(claimsOnly);
+            }
+            // If step carries partial results
+            if (stepData.data?.verified_claims) {
+              const vcs = stepData.data.verified_claims;
+              const mapped = vcs.map(c => ({
+                verdict: c.verdict || 'UNVERIFIABLE',
+                confidence: Math.round((c.confidence || 0) * (c.confidence > 1 ? 1 : 100)),
+                explanation: c.explanation || c.reasoning || '',
+                sources: c.sources || c.evidence_urls || [],
+                searchQuery: c.search_query || '',
+                conflicting: c.conflicting || false,
+                timeSensitive: c.time_sensitive || false,
+                difficulty: c.difficulty || 'MEDIUM',
+                tavilyAnswer: c.tavily_answer || '',
+              }));
+              setResults(mapped);
+              setVerifiedCount(mapped.length);
+            }
+          },
+          // onComplete — final report object from backend
+          (report) => {
+            // Map final report to our state
+            const claims = report.claims || report.verified_claims || [];
+            const claimsOnly = claims.map((c, i) => ({ id: i + 1, claim: c.claim || c.text || c, context: c.context || '' }));
+            const resultsMap = claims.map(c => ({
+              verdict: c.verdict || 'UNVERIFIABLE',
+              confidence: c.confidence > 1 ? c.confidence : Math.round((c.confidence || 0) * 100),
+              explanation: c.explanation || c.reasoning || '',
+              sources: c.sources || c.evidence_urls || [],
+              searchQuery: c.search_query || '',
+              conflicting: c.conflicting || false,
+              timeSensitive: c.time_sensitive || false,
+              difficulty: c.difficulty || 'MEDIUM',
+              tavilyAnswer: c.tavily_answer || '',
+            }));
+            setClaims(claimsOnly);
+            setResults(resultsMap);
+            setVerifiedCount(resultsMap.length);
+            setPipelineStep('report');
+
+            // AI detection from report if available
+            if (report.ai_detection) {
+              setAiDetection({
+                aiScore: Math.round((report.ai_detection.ai_probability || 0) * 100),
+                humanScore: Math.round((1 - (report.ai_detection.ai_probability || 0)) * 100),
+                verdict: report.ai_detection.verdict || 'UNCERTAIN',
+                signals: report.ai_detection.signals || [],
+              });
+            }
+            if (report.bias) setBiasData(report.bias);
+
+            // Save to history
+            const verdicts = { TRUE: 0, 'PARTIALLY TRUE': 0, FALSE: 0, UNVERIFIABLE: 0 };
+            resultsMap.forEach(r => { if (verdicts[r.verdict] !== undefined) verdicts[r.verdict]++; });
+            const accuracyScore = resultsMap.length > 0
+              ? Math.round(((verdicts.TRUE + verdicts['PARTIALLY TRUE'] * 0.5) / resultsMap.length) * 100) : 0;
+            saveAnalysis(userIdRef.current, {
+              mode: 'factcheck',
+              snippet: content.slice(0, 60) + (content.length > 60 ? '...' : ''),
+              accuracyScore, verdicts, claimCount: resultsMap.length,
+            });
+            refreshHistory();
+            setPhase('done');
+          },
+          // onError
+          (errMsg) => {
+            setError(errMsg);
+            setPhase('error');
+          },
+          abortController.signal
+        );
+      }
+
     } catch (err) {
       setError(err.message || 'An unexpected error occurred.');
       setPhase('error');
     }
   };
 
+  const handleShare = async () => {
+    // Build a summary text for sharing
+    const verdicts = { TRUE: 0, 'PARTIALLY TRUE': 0, FALSE: 0, UNVERIFIABLE: 0 };
+    results.forEach(r => { if (r && verdicts[r.verdict] !== undefined) verdicts[r.verdict]++; });
+    const total = results.filter(Boolean).length;
+    const score = total > 0 ? Math.round(((verdicts.TRUE + verdicts['PARTIALLY TRUE'] * 0.5) / total) * 100) : 0;
+
+    const shareText = analysisMode === 'factcheck'
+      ? `🔍 VeritAI Fact Check Report\n\nAccuracy Score: ${score}%\n✓ TRUE: ${verdicts.TRUE} · ◐ PARTIAL: ${verdicts['PARTIALLY TRUE']} · ✗ FALSE: ${verdicts.FALSE}\n\nVerified with real-time Tavily web search + Gemini AI\n\n#VeritAI #FactCheck`
+      : `🤖 VeritAI AI Detection Report\n\nAI Score: ${aiDetection?.aiScore || 0}%\nVerdict: ${aiDetection?.verdict || 'UNCERTAIN'}\n\nAnalyzed with Gemini AI\n\n#VeritAI #AIDetection`;
+
+    setShowShareModal(true);
+
+    // Try native share API first (mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'VeritAI Report', text: shareText });
+        setShowShareModal(false);
+        return;
+      } catch {}
+    }
+  };
+
+  const copyShareText = () => {
+    const verdicts = { TRUE: 0, 'PARTIALLY TRUE': 0, FALSE: 0, UNVERIFIABLE: 0 };
+    results.forEach(r => { if (r && verdicts[r.verdict] !== undefined) verdicts[r.verdict]++; });
+    const total = results.filter(Boolean).length;
+    const score = total > 0 ? Math.round(((verdicts.TRUE + verdicts['PARTIALLY TRUE'] * 0.5) / total) * 100) : 0;
+    const text = analysisMode === 'factcheck'
+      ? `🔍 VeritAI Fact Check Report\n\nAccuracy Score: ${score}%\n✓ TRUE: ${verdicts.TRUE} · ◐ PARTIAL: ${verdicts['PARTIALLY TRUE']} · ✗ FALSE: ${verdicts.FALSE}\n\nVerified with Tavily + Gemini AI\n#VeritAI #FactCheck`
+      : `🤖 VeritAI AI Detection\n\nAI Score: ${aiDetection?.aiScore || 0}%\nVerdict: ${aiDetection?.verdict || 'UNCERTAIN'}\n#VeritAI #AIDetection`;
+    navigator.clipboard.writeText(text).then(() => {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    });
+  };
+
   const handleReset = () => {
-    if (abortControllerRef.current) { abortControllerRef.current.abort(); abortControllerRef.current = null; }
     setPhase('idle'); setAnalysisMode(null); setPipelineStep(null);
     setClaims([]); setResults([]); setVerifiedCount(0);
-    setAiDetection(null); setBiasData(null); setError(null); setInputText('');
+    setAiDetection(null); setBiasData(null); setImageResult(null); setImagePreviewUrl(null); setError(null); setInputText('');
   };
 
   const handleRestoreHistory = (entry) => {
@@ -284,10 +429,13 @@ export default function App() {
     </div>
   );
 
-  const dashboardElement = (
+  if (showLanding) return <LandingPage onEnter={() => setShowLanding(false)} isSignedIn={isSignedIn} />;
+  if (!isSignedIn) return <AuthPage />;
+
+  return (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
       <Background />
-      <Header onBackToLanding={() => navigate('/')} />
+      <Header onBackToLanding={() => setShowLanding(true)} onLive={() => setShowLive(true)} />
 
       <main style={{ position: 'relative', zIndex: 1, maxWidth: '1380px', margin: '0 auto', padding: '32px 28px 80px' }}>
 
@@ -338,28 +486,43 @@ export default function App() {
               )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {/* Download report button — only when done */}
               {phase === 'done' && (
-                <button
-                  onClick={() => downloadReport({ claims, results, aiDetection, bias: biasData, inputText, mode: analysisMode })}
-                  style={{
-                    padding: '6px 16px', background: 'transparent',
-                    border: '1px solid rgba(0,212,255,0.4)',
-                    borderRadius: 'var(--radius)', color: 'var(--cyan)',
-                    fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '1px',
-                    cursor: 'pointer', transition: 'all 0.15s',
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.08)'; e.currentTarget.style.boxShadow = '0 0 12px rgba(0,212,255,0.2)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none'; }}
-                >
-                  ↓ DOWNLOAD REPORT
-                </button>
+                <>
+                  {/* Download */}
+                  <button
+                    onClick={() => downloadReport({ claims, results, aiDetection, bias: biasData, inputText, mode: analysisMode })}
+                    style={{
+                      padding: '6px 14px', background: 'transparent',
+                      border: '1px solid rgba(0,212,255,0.4)',
+                      borderRadius: 'var(--radius)', color: 'var(--cyan)',
+                      fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '1px',
+                      cursor: 'pointer', transition: 'all 0.15s',
+                      display: 'flex', alignItems: 'center', gap: '5px',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.08)'; e.currentTarget.style.boxShadow = '0 0 12px rgba(0,212,255,0.2)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none'; }}
+                  >↓ DOWNLOAD</button>
+
+                  {/* Share */}
+                  <button
+                    onClick={handleShare}
+                    style={{
+                      padding: '6px 14px', background: 'transparent',
+                      border: '1px solid rgba(0,232,135,0.4)',
+                      borderRadius: 'var(--radius)', color: 'var(--green)',
+                      fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '1px',
+                      cursor: 'pointer', transition: 'all 0.15s',
+                      display: 'flex', alignItems: 'center', gap: '5px',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,232,135,0.08)'; e.currentTarget.style.boxShadow = '0 0 12px rgba(0,232,135,0.2)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none'; }}
+                  >⬡ SHARE</button>
+                </>
               )}
-              <button onClick={handleReset} style={{ padding: '6px 16px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', color: 'var(--dim)', fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s' }}
+              <button onClick={handleReset} style={{ padding: '6px 14px', background: 'transparent', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', color: 'var(--dim)', fontFamily: 'var(--mono)', fontSize: '10px', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s' }}
                 onMouseEnter={e => { e.target.style.borderColor = 'var(--a1)'; e.target.style.color = 'var(--a1)'; }}
                 onMouseLeave={e => { e.target.style.borderColor = 'var(--line2)'; e.target.style.color = 'var(--dim)'; }}
-              >↩ NEW ANALYSIS</button>
+              >↩ NEW</button>
             </div>
           </div>
         )}
@@ -394,7 +557,7 @@ export default function App() {
             {/* LEFT — pipeline + history */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '20px' }}>
               <SectionLabel color="var(--cyan)">PIPELINE</SectionLabel>
-              <Pipeline currentStep={phase === 'done' ? 'report' : pipelineStep} claimCount={claims.length} verifiedCount={verifiedCount} isDone={phase === 'done'} />
+              <Pipeline currentStep={phase === 'done' ? 'report' : pipelineStep} claimCount={claims.length} verifiedCount={verifiedCount} />
 
               {/* Claim index */}
               {analysisMode === 'factcheck' && claims.length > 0 && (
@@ -433,17 +596,8 @@ export default function App() {
                   <SectionLabel>EXTRACTED CLAIMS</SectionLabel>
                   {claims.length === 0 ? (
                     <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-lg)', padding: '48px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--dim)', letterSpacing: '1px' }}>
-                      {phase === 'done' ? (
-                        <>
-                          <div style={{ fontSize: '24px', marginBottom: '12px', opacity: 0.4 }}>◈</div>
-                          NO VERIFIABLE CLAIMS FOUND
-                        </>
-                      ) : (
-                        <>
-                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '2px solid var(--a1)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
-                          {progressMsg}
-                        </>
-                      )}
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '2px solid var(--a1)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
+                      PROCESSING...
                     </div>
                   ) : (
                     <>
@@ -459,15 +613,19 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  <SectionLabel color="var(--cyan)">AI DETECTION RESULT</SectionLabel>
-                  {phase === 'done'
-                    ? <AIDetectionResult result={aiDetection} />
-                    : (
-                      <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-lg)', padding: '48px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--dim)', letterSpacing: '1px' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '2px solid var(--cyan)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
-                        ANALYZING AUTHORSHIP...
-                      </div>
-                    )}
+                  <SectionLabel color="var(--cyan)">
+                    {imageResult ? 'IMAGE AI DETECTION' : 'AI DETECTION RESULT'}
+                  </SectionLabel>
+                  {phase === 'done' ? (
+                    imageResult
+                      ? <ImageAIResult result={imageResult} previewUrl={imagePreviewUrl} />
+                      : <AIDetectionResult result={aiDetection} />
+                  ) : (
+                    <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-lg)', padding: '48px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--dim)', letterSpacing: '1px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '2px solid var(--cyan)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
+                      {imagePreviewUrl ? 'ANALYZING IMAGE...' : 'ANALYZING AUTHORSHIP...'}
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -519,15 +677,184 @@ export default function App() {
           </div>
         )}
       </main>
-    </div>
-  );
 
-  return (
-    <Routes>
-      <Route path="/" element={<LandingPage onEnter={() => navigate(isSignedIn ? '/app' : '/auth')} isSignedIn={isSignedIn} />} />
-      <Route path="/auth" element={<AuthPage onSuccess={() => navigate('/app')} />} />
-      <Route path="/app" element={isSignedIn ? dashboardElement : <Navigate to="/auth" replace />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      {/* ── LIVE FACT CHECK OVERLAY ─────────────────────────────────── */}
+      {showLive && <LiveFactCheck onClose={() => setShowLive(false)} />}
+
+      {/* ── SHARE MODAL ───────────────────────────────────────────────────── */}
+      {showShareModal && (
+        <div
+          onClick={() => setShowShareModal(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(6,10,15,0.85)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'fadeIn 0.2s ease both',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: '480px', margin: '24px',
+              background: 'var(--bg1)', border: '1px solid var(--line2)',
+              borderRadius: 'var(--radius-xl)',
+              overflow: 'hidden',
+              animation: 'fadeUp 0.2s ease both',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+            }}
+          >
+            {/* Modal header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px 20px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '3px', height: '16px', background: 'var(--green)' }} />
+                <span style={{ fontFamily: 'var(--display)', fontSize: '16px', letterSpacing: '2px', color: 'var(--green)' }}>SHARE REPORT</span>
+              </div>
+              <button onClick={() => setShowShareModal(false)} style={{
+                background: 'transparent', border: 'none', color: 'var(--dim)',
+                fontSize: '16px', cursor: 'pointer', fontFamily: 'var(--mono)',
+                transition: 'color 0.15s',
+              }}
+                onMouseEnter={e => e.target.style.color = 'var(--red)'}
+                onMouseLeave={e => e.target.style.color = 'var(--dim)'}
+              >✕</button>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              {/* Summary card preview */}
+              {(() => {
+                const verdicts = { TRUE: 0, 'PARTIALLY TRUE': 0, FALSE: 0, UNVERIFIABLE: 0 };
+                results.forEach(r => { if (r && verdicts[r.verdict] !== undefined) verdicts[r.verdict]++; });
+                const total = results.filter(Boolean).length;
+                const score = total > 0 ? Math.round(((verdicts.TRUE + verdicts['PARTIALLY TRUE'] * 0.5) / total) * 100) : 0;
+                const scoreColor = score >= 75 ? 'var(--green)' : score >= 40 ? 'var(--orange)' : 'var(--red)';
+
+                return (
+                  <div style={{
+                    padding: '16px', marginBottom: '16px',
+                    border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)',
+                    background: 'var(--bg2)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                      <div style={{ width: '28px', height: '28px', border: '1px solid var(--a1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: '8px', height: '8px', background: 'var(--a1)', clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)' }} />
+                      </div>
+                      <span style={{ fontFamily: 'var(--display)', fontSize: '16px', letterSpacing: '2px', color: 'var(--a1)' }}>VERITAI</span>
+                    </div>
+                    {analysisMode === 'factcheck' ? (
+                      <>
+                        <div style={{ fontFamily: 'var(--display)', fontSize: '36px', color: scoreColor, letterSpacing: '2px', lineHeight: 1 }}>{score}%</div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px', marginTop: '2px', marginBottom: '10px' }}>ACCURACY SCORE</div>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {[['TRUE', 'var(--green)', verdicts.TRUE], ['PARTIAL', 'var(--orange)', verdicts['PARTIALLY TRUE']], ['FALSE', 'var(--red)', verdicts.FALSE]].map(([label, color, count]) => (
+                            <div key={label} style={{ padding: '3px 10px', border: `1px solid ${color}44`, borderRadius: 'var(--radius)', fontFamily: 'var(--mono)', fontSize: '10px', color, background: `${color}10` }}>
+                              {count} {label}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontFamily: 'var(--display)', fontSize: '36px', color: 'var(--red)', letterSpacing: '2px', lineHeight: 1 }}>{aiDetection?.aiScore || 0}%</div>
+                        <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px', marginTop: '2px', marginBottom: '10px' }}>AI SCORE</div>
+                        <div style={{ padding: '3px 10px', border: '1px solid rgba(255,69,96,0.4)', borderRadius: 'var(--radius)', fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--red)', background: 'var(--red-dim)', display: 'inline-block' }}>
+                          {aiDetection?.verdict || 'UNCERTAIN'}
+                        </div>
+                      </>
+                    )}
+                    <div style={{ marginTop: '10px', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '1px' }}>
+                      Powered by Gemini + Tavily · veritai.app
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Share options */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {/* Copy text */}
+                <button onClick={copyShareText} style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '12px 16px', background: shareCopied ? 'rgba(0,232,135,0.08)' : 'var(--bg2)',
+                  border: `1px solid ${shareCopied ? 'var(--green)' : 'var(--line2)'}`,
+                  borderRadius: 'var(--radius-lg)', cursor: 'pointer', transition: 'all 0.15s', width: '100%',
+                }}>
+                  <span style={{ fontSize: '18px' }}>{shareCopied ? '✓' : '📋'}</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: shareCopied ? 'var(--green)' : 'var(--text)', letterSpacing: '1px' }}>
+                      {shareCopied ? 'COPIED TO CLIPBOARD!' : 'COPY SUMMARY TEXT'}
+                    </div>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', marginTop: '2px' }}>Copy report summary to paste anywhere</div>
+                  </div>
+                </button>
+
+                {/* Twitter/X */}
+                <button onClick={() => {
+                  const verdicts = { TRUE: 0, 'PARTIALLY TRUE': 0, FALSE: 0, UNVERIFIABLE: 0 };
+                  results.forEach(r => { if (r && verdicts[r.verdict] !== undefined) verdicts[r.verdict]++; });
+                  const total = results.filter(Boolean).length;
+                  const score = total > 0 ? Math.round(((verdicts.TRUE + verdicts['PARTIALLY TRUE'] * 0.5) / total) * 100) : 0;
+                  const text = analysisMode === 'factcheck'
+                    ? `Just fact-checked an article with VeritAI 🔍\n\nAccuracy: ${score}% | ✓${verdicts.TRUE} TRUE · ✗${verdicts.FALSE} FALSE\n\nPowered by real-time Tavily search + Gemini AI\n#VeritAI #FactCheck #AI`
+                    : `Just ran AI detection on a text with VeritAI 🤖\n\nAI Score: ${aiDetection?.aiScore || 0}% — ${aiDetection?.verdict || 'UNCERTAIN'}\n\n#VeritAI #AIDetection`;
+                  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                }} style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '12px 16px', background: 'var(--bg2)',
+                  border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)',
+                  cursor: 'pointer', transition: 'all 0.15s', width: '100%',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#1d9bf0'; e.currentTarget.style.background = 'rgba(29,155,240,0.06)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line2)'; e.currentTarget.style.background = 'var(--bg2)'; }}
+                >
+                  <span style={{ fontSize: '18px' }}>𝕏</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--text)', letterSpacing: '1px' }}>SHARE ON X / TWITTER</div>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', marginTop: '2px' }}>Open X with pre-filled tweet</div>
+                  </div>
+                </button>
+
+                {/* LinkedIn */}
+                <button onClick={() => {
+                  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://veritai.app')}`, '_blank');
+                }} style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '12px 16px', background: 'var(--bg2)',
+                  border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)',
+                  cursor: 'pointer', transition: 'all 0.15s', width: '100%',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#0a66c2'; e.currentTarget.style.background = 'rgba(10,102,194,0.06)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line2)'; e.currentTarget.style.background = 'var(--bg2)'; }}
+                >
+                  <span style={{ fontSize: '18px' }}>in</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--text)', letterSpacing: '1px' }}>SHARE ON LINKEDIN</div>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', marginTop: '2px' }}>Share to your LinkedIn feed</div>
+                  </div>
+                </button>
+
+                {/* Download */}
+                <button onClick={() => { downloadReport({ claims, results, aiDetection, bias: biasData, inputText, mode: analysisMode }); setShowShareModal(false); }} style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '12px 16px', background: 'var(--bg2)',
+                  border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)',
+                  cursor: 'pointer', transition: 'all 0.15s', width: '100%',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--cyan)'; e.currentTarget.style.background = 'rgba(0,212,255,0.06)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--line2)'; e.currentTarget.style.background = 'var(--bg2)'; }}
+                >
+                  <span style={{ fontSize: '18px' }}>↓</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--text)', letterSpacing: '1px' }}>DOWNLOAD HTML REPORT</div>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', marginTop: '2px' }}>Save full styled report as .html file</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

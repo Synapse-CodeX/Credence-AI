@@ -1,4 +1,4 @@
-// downloadReport.js — generates and downloads a plain text / HTML report
+// downloadReport.js — generates and downloads report as PDF
 
 export function downloadReport({ claims, results, aiDetection, bias, inputText, mode }) {
   const now = new Date();
@@ -23,6 +23,12 @@ export function downloadReport({ claims, results, aiDetection, bias, inputText, 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Courier New', monospace; background: #060a0f; color: #e8edf5; padding: 40px; }
+  @media print {
+    body { background: #060a0f !important; color: #e8edf5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .claim-card { page-break-inside: avoid; }
+  }
+  .print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #f0b429; color: #060a0f; border: none; font-family: 'Courier New', monospace; font-size: 12px; font-weight: bold; letter-spacing: 2px; cursor: pointer; z-index: 999; border-radius: 4px; }
   .header { border-bottom: 2px solid #f0b429; padding-bottom: 20px; margin-bottom: 32px; }
   .logo { font-size: 36px; font-weight: bold; color: #f0b429; letter-spacing: 4px; }
   .subtitle { font-size: 10px; color: #6b7a9e; letter-spacing: 3px; margin-top: 4px; }
@@ -46,7 +52,7 @@ export function downloadReport({ claims, results, aiDetection, bias, inputText, 
   .conf-bar-fill { height: 100%; border-radius: 2px; }
   .explanation { font-size: 12px; color: #8899aa; line-height: 1.7; padding: 10px 12px; background: #060a0f; border: 1px solid #182030; margin-top: 10px; }
   .sources { margin-top: 10px; }
-  .source-item { font-size: 11px; color: #00d4ff; padding: 5px 10px; background: rgba(0,212,255,0.06); border: 1px solid rgba(0,212,255,0.15); margin-bottom: 4px; }
+  .source-item { font-size: 11px; color: #00d4ff; padding: 5px 10px; background: rgba(0,212,255,0.06); border: 1px solid rgba(0,212,255,0.15); margin-bottom: 4px; word-break: break-all; }
   .badge { display: inline-block; font-size: 9px; padding: 2px 8px; border-radius: 3px; margin-right: 6px; letter-spacing: 1px; }
   .badge-time { color: #ff8c42; border: 1px solid rgba(255,140,66,0.4); background: rgba(255,140,66,0.08); }
   .badge-diff { border: 1px solid currentColor; }
@@ -54,9 +60,6 @@ export function downloadReport({ claims, results, aiDetection, bias, inputText, 
   .ai-card { background: #0b1118; border: 1px solid #182030; padding: 14px; text-align: center; }
   .ai-val { font-size: 28px; font-weight: bold; }
   .ai-label { font-size: 9px; color: #6b7a9e; letter-spacing: 2px; margin-top: 4px; }
-  .bias-spectrum { height: 8px; border-radius: 4px; background: linear-gradient(90deg, #60a5fa, #93c5fd, #00e887, #fca5a5, #ff4560); margin: 10px 0; position: relative; }
-  .bias-dot { width: 14px; height: 14px; border-radius: 50%; background: #f0b429; border: 2px solid #060a0f; position: absolute; top: 50%; transform: translate(-50%,-50%); }
-  .signal-item { font-size: 11px; color: #8899aa; padding: 8px 12px; background: #0b1118; border: 1px solid #182030; margin-bottom: 4px; display: flex; gap: 8px; }
   .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #182030; font-size: 10px; color: #6b7a9e; letter-spacing: 1px; }
   .input-snippet { font-size: 12px; color: #8899aa; padding: 12px; background: #0b1118; border: 1px solid #182030; line-height: 1.7; margin-top: 8px; max-height: 80px; overflow: hidden; }
   h1, h2, h3 { font-weight: normal; }
@@ -64,17 +67,17 @@ export function downloadReport({ claims, results, aiDetection, bias, inputText, 
 </head>
 <body>
 
+<button class="print-btn no-print" onclick="window.print()">⬇ SAVE AS PDF</button>
+
 <div class="header">
   <div class="logo">CredenceAI</div>
   <div class="subtitle">FACT VERIFICATION ENGINE — ANALYSIS REPORT</div>
   <div class="meta">Generated: ${dateStr} &nbsp;|&nbsp; Mode: FACT CHECK &nbsp;|&nbsp; Claims: ${total}</div>
 </div>
 
-<!-- Input snippet -->
 <div class="section-title">ANALYZED TEXT</div>
 <div class="input-snippet">${(inputText || '').slice(0, 400).replace(/</g,'&lt;').replace(/>/g,'&gt;')}${inputText?.length > 400 ? '...' : ''}</div>
 
-<!-- Score summary -->
 <div class="section-title">ACCURACY SUMMARY</div>
 <div class="score-grid">
   <div class="score-card">
@@ -91,7 +94,6 @@ export function downloadReport({ claims, results, aiDetection, bias, inputText, 
   </div>
 </div>
 
-<!-- Verdict breakdown -->
 <div class="score-grid">
   ${[['TRUE','#00e887',verdicts.TRUE],['PARTIALLY TRUE','#ff8c42',verdicts['PARTIALLY TRUE']],['FALSE','#ff4560',verdicts.FALSE],['UNVERIFIABLE','#888',verdicts.UNVERIFIABLE]].map(([label,color,count]) => `
   <div class="score-card">
@@ -100,7 +102,6 @@ export function downloadReport({ claims, results, aiDetection, bias, inputText, 
   </div>`).join('')}
 </div>
 
-<!-- Claims -->
 <div class="section-title">EXTRACTED CLAIMS & VERDICTS</div>
 ${claims.map((claim, i) => {
   const r = results[i];
@@ -114,7 +115,7 @@ ${claims.map((claim, i) => {
       <div style="font-size:9px;color:#6b7a9e;letter-spacing:2px;margin-bottom:6px">CLAIM ${String(i+1).padStart(2,'0')}</div>
       <div class="claim-text">${claim.claim.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
       <div style="margin-top:6px">
-        ${r.timeSensitive ? '<span class="badge badge-time">⏰ TIME-SENSITIVE</span>' : ''}
+        ${r.timeSensitive ? '<span class="badge badge-time">TIME-SENSITIVE</span>' : ''}
         ${r.difficulty ? `<span class="badge badge-diff" style="color:${r.difficulty==='EASY'?'#00e887':r.difficulty==='MEDIUM'?'#ff8c42':'#ff4560'}">◆ ${r.difficulty}</span>` : ''}
       </div>
     </div>
@@ -134,7 +135,6 @@ ${claims.map((claim, i) => {
 </div>`;
 }).join('')}
 
-<!-- AI Detection -->
 ${aiDetection ? `
 <div class="section-title">AI CONTENT DETECTION</div>
 <div class="ai-grid">
@@ -142,10 +142,9 @@ ${aiDetection ? `
   <div class="ai-card"><div class="ai-val" style="color:#00e887">${aiDetection.humanScore}%</div><div class="ai-label">HUMAN-WRITTEN</div></div>
 </div>
 <div style="font-size:11px;padding:6px 12px;border:1px solid #182030;display:inline-block;color:#8899aa;letter-spacing:1.5px">${aiDetection.verdict}</div>
-${aiDetection.signals?.length ? `<div style="margin-top:12px">${aiDetection.signals.map((s,i)=>`<div class="signal-item"><span style="color:#f0b429">${String(i+1).padStart(2,'0')}</span>${s.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`).join('')}</div>` : ''}
+${aiDetection.signals?.length ? `<div style="margin-top:12px">${aiDetection.signals.map((s,i)=>`<div style="font-size:11px;color:#8899aa;padding:8px 12px;background:#0b1118;border:1px solid #182030;margin-bottom:4px;display:flex;gap:8px"><span style="color:#f0b429">${String(i+1).padStart(2,'0')}</span>${s.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`).join('')}</div>` : ''}
 ` : ''}
 
-<!-- Bias -->
 ${bias ? `
 <div class="section-title">BIAS ANALYSIS</div>
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
@@ -153,27 +152,27 @@ ${bias ? `
   <div class="score-card"><div class="score-val" style="color:#00e887">${bias.objectivityScore}%</div><div class="score-label">OBJECTIVITY</div></div>
   <div class="score-card"><div class="score-val" style="font-size:18px;color:#ff8c42">${bias.emotionalTone}</div><div class="score-label">TONE</div></div>
 </div>
-<div class="bias-spectrum"><div class="bias-dot" style="left:${Math.min(100,Math.max(0,(bias.biasScore+100)/2))}%"></div></div>
 ${bias.summary ? `<div class="explanation">${bias.summary.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
-${bias.biasedPhrases?.length ? `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">${bias.biasedPhrases.map(p=>`<span style="padding:3px 10px;border:1px solid rgba(167,139,250,0.3);color:#a78bfa;font-size:10px">"${p.replace(/</g,'&lt;').replace(/>/g,'&gt;')}"</span>`).join('')}</div>` : ''}
 ` : ''}
 
 <div class="footer">
   CredenceAI · FACT VERIFICATION ENGINE &nbsp;|&nbsp; ${dateStr} &nbsp;|&nbsp; Powered by Google Gemini
 </div>
 
+<script>
+  // Auto-trigger print dialog on load for seamless PDF save experience
+  window.onload = function() {
+    setTimeout(() => window.print(), 500);
+  };
+</script>
+
 </body>
 </html>`;
 
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `CredenceAI-report-${Date.now()}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
+    openAndPrint(html, `CredenceAI-report-${Date.now()}.pdf`);
+
   } else {
-    // AI detection mode report
+    // AI detection mode
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -182,12 +181,17 @@ ${bias.biasedPhrases?.length ? `<div style="margin-top:10px;display:flex;flex-wr
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Courier New', monospace; background: #060a0f; color: #e8edf5; padding: 40px; }
+  @media print {
+    body { background: #060a0f !important; color: #e8edf5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+  }
+  .print-btn { position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #00d4ff; color: #060a0f; border: none; font-family: 'Courier New', monospace; font-size: 12px; font-weight: bold; letter-spacing: 2px; cursor: pointer; z-index: 999; border-radius: 4px; }
   .header { border-bottom: 2px solid #00d4ff; padding-bottom: 20px; margin-bottom: 32px; }
   .logo { font-size: 36px; font-weight: bold; color: #00d4ff; letter-spacing: 4px; }
   .subtitle { font-size: 10px; color: #6b7a9e; letter-spacing: 3px; margin-top: 4px; }
   .meta { font-size: 11px; color: #6b7a9e; margin-top: 12px; }
   .section-title { font-size: 11px; letter-spacing: 3px; color: #6b7a9e; margin: 28px 0 12px; border-left: 3px solid #00d4ff; padding-left: 10px; }
-  .verdict-banner { padding: 24px 28px; border-radius: 6px; display: flex; align-items: center; gap: 24px; margin-bottom: 20px; }
+  .verdict-banner { padding: 24px 28px; display: flex; align-items: center; gap: 24px; margin-bottom: 20px; }
   .big-score { font-size: 56px; font-weight: bold; line-height: 1; }
   .verdict-text { font-size: 28px; letter-spacing: 3px; font-weight: bold; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
@@ -196,10 +200,13 @@ ${bias.biasedPhrases?.length ? `<div style="margin-top:10px;display:flex;flex-wr
   .card-label { font-size: 9px; color: #6b7a9e; letter-spacing: 2px; margin-top: 4px; }
   .signal-item { font-size: 11px; color: #8899aa; padding: 8px 12px; background: #0b1118; border: 1px solid #182030; margin-bottom: 4px; display: flex; gap: 8px; }
   .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #182030; font-size: 10px; color: #6b7a9e; }
-  .input-snippet { font-size: 12px; color: #8899aa; padding: 12px; background: #0b1118; border: 1px solid #182030; line-height: 1.7; margin-top: 8px; max-height: 80px; overflow: hidden; }
+  .input-snippet { font-size: 12px; color: #8899aa; padding: 12px; background: #0b1118; border: 1px solid #182030; line-height: 1.7; margin-top: 8px; }
 </style>
 </head>
 <body>
+
+<button class="print-btn no-print" onclick="window.print()">⬇ SAVE AS PDF</button>
+
 <div class="header">
   <div class="logo">CredenceAI</div>
   <div class="subtitle">AI CONTENT DETECTION REPORT</div>
@@ -230,14 +237,33 @@ ${aiDetection.signals.map((s,i)=>`<div class="signal-item"><span style="color:#0
 ` : ''}
 
 <div class="footer">CredenceAI · AI DETECTION ENGINE &nbsp;|&nbsp; ${dateStr} &nbsp;|&nbsp; Powered by Google Gemini</div>
+
+<script>
+  window.onload = function() {
+    setTimeout(() => window.print(), 500);
+  };
+</script>
+
 </body></html>`;
 
+    openAndPrint(html, `CredenceAI-ai-detection-${Date.now()}.pdf`);
+  }
+}
+
+// Opens report in new tab and triggers print dialog (Save as PDF)
+function openAndPrint(html, filename) {
+  const win = window.open('', '_blank');
+  if (!win) {
+    // Fallback: if popup blocked, download as HTML
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `CredenceAI-ai-detection-${Date.now()}.html`;
+    a.download = filename.replace('.pdf', '.html');
     a.click();
     URL.revokeObjectURL(url);
+    return;
   }
+  win.document.write(html);
+  win.document.close();
 }
