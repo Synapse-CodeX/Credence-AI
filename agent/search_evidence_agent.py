@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Literal
 from langchain_openai import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
 from agent_state import AgentState, ClaimExtractionOutput, Claim, EvidenceSource, VerificationResult
 import os
 from dotenv import load_dotenv   
@@ -119,7 +118,7 @@ def search_evidence(state: AgentState) -> dict:
                 title=r.get("title", ""),
                 content=r.get("content", ""),
                 url=r.get("url", ""),
-                relevance_score=score_result(r),
+                score=r.get("score"),
                 query_used=r.get("query_used"),
                 credibility=1.0 if any(t in (r.get("url") or "") for t in trusted_domains) else 0.5
             )

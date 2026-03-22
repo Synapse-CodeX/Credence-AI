@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Literal
 from langchain_openai import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
 from agent_state import AgentState, ClaimExtractionOutput, Claim, EvidenceSource, VerificationResult
 from dotenv import load_dotenv
 import os
