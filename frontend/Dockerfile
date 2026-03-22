@@ -1,5 +1,5 @@
 # ── Stage 1: Build React app ─────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /build
 
@@ -7,7 +7,7 @@ WORKDIR /build
 COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm ci --silent
+RUN npm install
 
 # Copy source code
 COPY . .

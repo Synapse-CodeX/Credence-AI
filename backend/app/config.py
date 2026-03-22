@@ -3,8 +3,8 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # SightEngine
-    sightengine_api_user: str
-    sightengine_api_secret: str
+    sightengine_api_user: str = ""
+    sightengine_api_secret: str = ""
 
     # LLM (switchable — any OpenAI-compatible provider)
     llm_base_url: str = "https://api.openai.com/v1"
