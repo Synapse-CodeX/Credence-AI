@@ -101,7 +101,7 @@ export default function Header({ onBackToLanding }) {
             letterSpacing: '1px', fontSize: '10px',
             boxShadow: '0 0 8px var(--a1-dim)',
           }}>
-            {isMobile ? 'G2.0' : 'GEMINI 2.0'}
+            {isMobile ? 'GPT-4.0' : 'GPT-4.0 '}
           </div>
 
           {isSignedIn && <UserMenu />}
