@@ -3,26 +3,30 @@ from typing import List, Dict, Optional, Literal
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from agent_state import AgentState, ClaimExtractionOutput, Claim, EvidenceSource, VerificationResult
-
+from dotenv import load_dotenv
+import os   
+load_dotenv()
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
 
 def extract_claims(state: AgentState) -> dict:
    print("\n[Agent 1] Extracting claims...")
    prompt = f"""
 Extract clear, atomic, and verifiable claims from the given text.
+
 Guidelines:
-- Only objective, factual statements
-- Ignore opinions, predictions, vague or rhetorical text
-- Break complex sentences into smaller standalone claims
-- Avoid duplicate or overlapping claims
-- Limit to the 5–10 most important claims
+- Extract ALL statements that can be fact-checked (even if they may be false)
+- Do NOT filter based on correctness
+- Include incorrect or absurd claims if they are verifiable
+- Ignore opinions and vague statements only
+
+- Break complex sentences into standalone claims
+- Avoid duplicates
+- Limit to 5–10 most important claims
+
 For each claim:
 - Assign type: factual, numerical, temporal, entity
-- Provide confidence score (0 to 1)
-Ensure:
-- Claims are concise and unambiguous
-- Each claim can be independently verified
-- Prefer widely known or high-impact claims over trivial details.
+- Provide confidence score based on clarity (NOT truth)
+
 Text:
 {state.input_text}
 """
