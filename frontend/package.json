@@ -1,6 +1,7 @@
 {
   "name": "factcheck-ai",
   "version": "1.0.0",
+  "proxy": "http://localhost:8000",
   "private": true,
   "dependencies": {
     "@clerk/clerk-react": "^5.61.4",
