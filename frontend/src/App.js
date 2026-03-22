@@ -5,6 +5,8 @@ import InputPanel from './components/InputPanel';
 import Pipeline from './components/Pipeline';
 import ClaimCard from './components/ClaimCard';
 import SummaryReport from './components/SummaryReport';
+import { useAuth } from '@clerk/clerk-react';
+import AuthPage from './components/AuthPage';
 import { extractAndVerifyAll, detectAIContent } from './services/api';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -142,6 +144,8 @@ function AIDetectionResult({ result }) {
 
 // ── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
+  const { isSignedIn, isLoaded } = useAuth();
+
   const [phase, setPhase] = useState('idle');
   const [analysisMode, setAnalysisMode] = useState(null); // 'factcheck' | 'aidetect'
   const [pipelineStep, setPipelineStep] = useState(null);
@@ -200,6 +204,14 @@ export default function App() {
   };
 
   const isLoading = phase === 'running';
+
+  // Auth gate
+  if (!isLoaded) return (
+    <div style={{ minHeight:'100vh', background:'var(--bg0)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ width:'32px', height:'32px', borderRadius:'50%', border:'2px solid var(--a1)', borderTopColor:'transparent', animation:'spin 0.8s linear infinite' }} />
+    </div>
+  );
+  if (!isSignedIn) return <AuthPage />;
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative' }}>
