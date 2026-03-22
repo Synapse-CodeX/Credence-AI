@@ -1,5 +1,6 @@
 """POST /api/verify — Start a verification pipeline."""
 
+import asyncio
 import uuid
 import logging
 from typing import Annotated
@@ -14,6 +15,14 @@ from app.sockets.events import emit_progress, emit_error
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["Verification"])
+
+
+async def _run_pipeline_background(
+    session_id: str, input_text: str, input_url: str | None, scraped_images: list[str] | None,
+) -> None:
+    """Import and run the pipeline in the background (deferred import to avoid circular deps)."""
+    from app.agents.graph import run_pipeline
+    await run_pipeline(session_id, input_text, input_url, scraped_images)
 
 
 @router.post("/verify")
@@ -34,6 +43,7 @@ async def start_verification(
     session_id = str(uuid.uuid4())
     input_text = body.text or ""
     input_url = body.url
+    scraped_images: list[str] = []
 
     # If URL is provided, scrape it to get text
     if input_url and not input_text:
@@ -41,11 +51,12 @@ async def start_verification(
             await emit_progress(session_id, "scraping", "started")
             scraped = await scrape_url(input_url)
             input_text = scraped.text
+            scraped_images = scraped.images
             await emit_progress(
                 session_id,
                 "scraping",
                 "completed",
-                {"title": scraped.title, "char_count": len(input_text), "image_count": len(scraped.images)},
+                {"title": scraped.title, "char_count": len(input_text), "image_count": len(scraped_images)},
             )
         except Exception as exc:
             logger.error("Failed to scrape URL %s: %s", input_url, exc)
@@ -64,9 +75,10 @@ async def start_verification(
     # Persist the session
     await create_session(session_id, input_text, input_url)
 
-    # TODO: Kick off the LangGraph pipeline in the background
-    # This will be wired up when agents are built.
-    # For now, return the session_id so the frontend can connect.
+    # Kick off the pipeline in the background
+    asyncio.create_task(
+        _run_pipeline_background(session_id, input_text, input_url, scraped_images or None)
+    )
 
     return VerifyResponse(
         session_id=session_id,

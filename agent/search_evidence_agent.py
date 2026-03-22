@@ -115,7 +115,7 @@ def search_evidence(state: AgentState) -> dict:
                 title=r.get("title", ""),
                 content=r.get("content", ""),
                 url=r.get("url", ""),
-                relevance_score=score_result(r),
+                score=r.get("score"),
                 query_used=r.get("query_used"),
                 credibility=1.0 if any(t in (r.get("url") or "") for t in trusted_domains) else 0.5
             )

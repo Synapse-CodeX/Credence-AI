@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routes.detect_media import router as detect_media_router
+from app.routes.detect_text import router as detect_text_router
 from app.routes.health import router as health_router
 from app.routes.history import router as history_router
 from app.routes.report import router as report_router
@@ -43,6 +44,7 @@ api.include_router(verify_router)
 api.include_router(report_router)
 api.include_router(history_router)
 api.include_router(detect_media_router)
+api.include_router(detect_text_router)
 
 # ─── Socket.IO mount ────────────────────────────────────────────────────────
 # The Socket.IO ASGI app wraps the FastAPI app.
