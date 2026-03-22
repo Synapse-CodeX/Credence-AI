@@ -19,7 +19,7 @@ export function downloadReport({ claims, results, aiDetection, bias, inputText, 
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<title>VeritAI Fact Check Report</title>
+<title>CredenceAI Fact Check Report</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Courier New', monospace; background: #060a0f; color: #e8edf5; padding: 40px; }
@@ -65,7 +65,7 @@ export function downloadReport({ claims, results, aiDetection, bias, inputText, 
 <body>
 
 <div class="header">
-  <div class="logo">VERITAI</div>
+  <div class="logo">CredenceAI</div>
   <div class="subtitle">FACT VERIFICATION ENGINE — ANALYSIS REPORT</div>
   <div class="meta">Generated: ${dateStr} &nbsp;|&nbsp; Mode: FACT CHECK &nbsp;|&nbsp; Claims: ${total}</div>
 </div>
@@ -159,7 +159,7 @@ ${bias.biasedPhrases?.length ? `<div style="margin-top:10px;display:flex;flex-wr
 ` : ''}
 
 <div class="footer">
-  VERITAI · FACT VERIFICATION ENGINE &nbsp;|&nbsp; ${dateStr} &nbsp;|&nbsp; Powered by Google Gemini
+  CredenceAI · FACT VERIFICATION ENGINE &nbsp;|&nbsp; ${dateStr} &nbsp;|&nbsp; Powered by Google Gemini
 </div>
 
 </body>
@@ -169,7 +169,7 @@ ${bias.biasedPhrases?.length ? `<div style="margin-top:10px;display:flex;flex-wr
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `veritai-report-${Date.now()}.html`;
+    a.download = `CredenceAI-report-${Date.now()}.html`;
     a.click();
     URL.revokeObjectURL(url);
   } else {
@@ -178,7 +178,7 @@ ${bias.biasedPhrases?.length ? `<div style="margin-top:10px;display:flex;flex-wr
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<title>VeritAI AI Detection Report</title>
+<title>CredenceAI AI Detection Report</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Courier New', monospace; background: #060a0f; color: #e8edf5; padding: 40px; }
@@ -201,7 +201,7 @@ ${bias.biasedPhrases?.length ? `<div style="margin-top:10px;display:flex;flex-wr
 </head>
 <body>
 <div class="header">
-  <div class="logo">VERITAI</div>
+  <div class="logo">CredenceAI</div>
   <div class="subtitle">AI CONTENT DETECTION REPORT</div>
   <div class="meta">Generated: ${dateStr}</div>
 </div>
@@ -229,14 +229,14 @@ ${aiDetection.signals?.length ? `
 ${aiDetection.signals.map((s,i)=>`<div class="signal-item"><span style="color:#00d4ff">${String(i+1).padStart(2,'0')}</span>${s.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`).join('')}` : ''}
 ` : ''}
 
-<div class="footer">VERITAI · AI DETECTION ENGINE &nbsp;|&nbsp; ${dateStr} &nbsp;|&nbsp; Powered by Google Gemini</div>
+<div class="footer">CredenceAI · AI DETECTION ENGINE &nbsp;|&nbsp; ${dateStr} &nbsp;|&nbsp; Powered by Google Gemini</div>
 </body></html>`;
 
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `veritai-ai-detection-${Date.now()}.html`;
+    a.download = `CredenceAI-ai-detection-${Date.now()}.html`;
     a.click();
     URL.revokeObjectURL(url);
   }

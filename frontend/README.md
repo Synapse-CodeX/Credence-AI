@@ -1,4 +1,4 @@
-# VeritAI — AI Fact-Checking Engine
+# CredenceAI — AI Fact-Checking Engine
 
 A sleek, neon-themed React web app that uses the Claude AI API to automatically extract claims from text, verify them against real-world knowledge, and generate a detailed accuracy report.
 

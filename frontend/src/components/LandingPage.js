@@ -128,7 +128,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
               }} />
             </div>
             <div>
-              <div style={{ fontFamily: 'var(--display)', fontSize: isMobile ? '18px' : '22px', letterSpacing: '3px', color: 'var(--a1)', lineHeight: 1 }}>VERITAI</div>
+              <div style={{ fontFamily: 'var(--display)', fontSize: isMobile ? '18px' : '22px', letterSpacing: '3px', color: 'var(--a1)', lineHeight: 1 }}>CredenceAI</div>
               {!isMobile && <div style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--dim)', letterSpacing: '2px' }}>FACT VERIFICATION ENGINE</div>}
             </div>
           </div>
@@ -158,8 +158,8 @@ export default function LandingPage({ onEnter, isSignedIn }) {
           </h1>
           <p className="landing-hero-subtitle">
             {isMobile
-              ? 'Paste any text — VeritAI extracts claims, cross-references evidence, and delivers an accuracy report with sources.'
-              : 'Paste any article or text — VeritAI extracts every factual claim, cross-references evidence from multiple sources, and delivers a color-coded accuracy report with cited sources and confidence scores. Powered by Google Gemini.'}
+              ? 'Paste any text — CredenceAI extracts claims, cross-references evidence, and delivers an accuracy report with sources.'
+              : 'Paste any article or text — CredenceAI extracts every factual claim, cross-references evidence from multiple sources, and delivers a color-coded accuracy report with cited sources and confidence scores. Powered by Google Gemini.'}
           </p>
           <div className="landing-hero-actions">
             <button onClick={onEnter} className="btn-primary landing-hero-btn">
@@ -223,7 +223,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
             <h2 className="landing-section-title">HOW IT <span style={{ color: 'var(--cyan)' }}>WORKS</span></h2>
           </div>
           <div className="landing-pipeline">
-            <PipelineStep number={1} title="PASTE YOUR CONTENT" color="var(--a1)" description="Drop in any article text or enter a claim you want verified. VeritAI handles both raw text and file uploads." />
+            <PipelineStep number={1} title="PASTE YOUR CONTENT" color="var(--a1)" description="Drop in any article text or enter a claim you want verified. CredenceAI handles both raw text and file uploads." />
             <PipelineStep number={2} title="EXTRACT CLAIMS" color="var(--cyan)" description="Our Chain-of-Thought AI breaks the content into atomic, self-contained factual claims — each tagged and ready for verification." />
             <PipelineStep number={3} title="SEARCH & VERIFY" color="var(--green)" description="Each claim is independently verified against knowledge sources. A self-reflection loop challenges and refines every verdict." />
             <PipelineStep number={4} title="GET YOUR REPORT" color="var(--orange)" isLast description="Receive a comprehensive accuracy report with color-coded verdicts, confidence scores, cited sources, and AI content analysis." />
@@ -260,7 +260,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
             <p style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)', maxWidth: '460px', margin: '0 auto 28px', lineHeight: '1.8', letterSpacing: '0.3px' }}>
               {isSignedIn
                 ? 'Welcome back. Your dashboard is ready — jump straight into fact-checking.'
-                : 'Join journalists, researchers, and curious minds who trust VeritAI to separate fact from fiction.'}
+                : 'Join journalists, researchers, and curious minds who trust CredenceAI to separate fact from fiction.'}
             </p>
             <button onClick={onEnter} className="btn-primary landing-hero-btn" style={{ fontSize: isMobile ? '16px' : '20px', padding: isMobile ? '13px 32px' : '16px 48px' }}>
               {isSignedIn ? 'OPEN DASHBOARD →' : 'GET STARTED FREE →'}
@@ -278,7 +278,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
         gap: '10px',
         fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)', background: 'var(--bg0)',
       }}>
-        <span style={{ letterSpacing: '1px' }}>© 2026 VERITAI · FACT VERIFICATION ENGINE</span>
+        <span style={{ letterSpacing: '1px' }}>© 2026 CredenceAI · FACT VERIFICATION ENGINE</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ color: 'var(--green)', animation: 'pulse 1.5s ease infinite' }}>●</span>
           <span>POWERED BY OPENAI</span>

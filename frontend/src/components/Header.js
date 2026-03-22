@@ -74,7 +74,7 @@ export default function Header({ onBackToLanding }) {
             ))}
           </div>
           <div>
-            <div style={{ fontFamily: 'var(--display)', fontSize: isMobile ? '18px' : '22px', letterSpacing: '3px', color: 'var(--a1)', lineHeight: 1 }}>VERITAI</div>
+            <div style={{ fontFamily: 'var(--display)', fontSize: isMobile ? '18px' : '22px', letterSpacing: '3px', color: 'var(--a1)', lineHeight: 1 }}>CredenceAI</div>
             {!isMobile && <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px', marginTop: '1px' }}>FACT VERIFICATION ENGINE</div>}
           </div>
         </div>

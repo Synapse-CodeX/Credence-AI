@@ -34,7 +34,7 @@ export default function Footer() {
             <span style={{
               fontFamily:'var(--display)', fontSize:'18px',
               letterSpacing:'3px', color:'var(--a1)',
-            }}>VERITAI</span>
+            }}>CredenceAI</span>
             <span style={{
               fontFamily:'var(--mono)', fontSize:'9px',
               color:'var(--dim)', letterSpacing:'1px',
@@ -90,7 +90,7 @@ export default function Footer() {
         fontFamily:'var(--mono)', fontSize:'9px',
         color:'var(--dim)', letterSpacing:'1px',
       }}>
-        <span>© {new Date().getFullYear()} VERITAI — INTELLIGENCE VERIFICATION PLATFORM</span>
+        <span>© {new Date().getFullYear()} CredenceAI — INTELLIGENCE VERIFICATION PLATFORM</span>
         <div style={{display:'flex',gap:'16px'}}>
           <span style={{cursor:'pointer',transition:'color 0.2s'}}
             onMouseEnter={e=>e.target.style.color='var(--a1)'}

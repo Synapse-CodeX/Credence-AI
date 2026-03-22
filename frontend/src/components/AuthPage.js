@@ -59,7 +59,7 @@ export default function AuthPage({ onSuccess }) {
         <div style={{ width: '28px', height: '28px', border: '1px solid var(--a1)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 10px var(--a1-glow)' }}>
           <div style={{ width: '9px', height: '9px', background: 'var(--a1)', clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)', animation: 'pulse 2s ease infinite' }} />
         </div>
-        <div style={{ fontFamily: 'var(--display)', fontSize: '20px', letterSpacing: '3px', color: 'var(--a1)' }}>VERITAI</div>
+        <div style={{ fontFamily: 'var(--display)', fontSize: '20px', letterSpacing: '3px', color: 'var(--a1)' }}>CredenceAI</div>
         <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px', marginTop: '2px' }}>FACT VERIFICATION ENGINE</div>
       </nav>
 
