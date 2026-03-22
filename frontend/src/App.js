@@ -1,18 +1,19 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import Background from './components/Background';
 import Header from './components/Header';
-import Footer from './components/Footer';
 import InputPanel from './components/InputPanel';
 import Pipeline from './components/Pipeline';
 import ClaimCard from './components/ClaimCard';
 import SummaryReport from './components/SummaryReport';
-import { extractAndVerifyAll, detectAIContent, fetchUrlText } from './services/api';
+import { extractAndVerifyAll, detectAIContent } from './services/api';
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function SectionLabel({ color = 'var(--a1)', children }) {
   return (
-    <div className="section-label">
-      <div className="section-label__bar" style={{ background: color }} />
-      <span className="section-label__text" style={{ color }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+      <div style={{ width: '3px', height: '18px', background: color }} />
+      <span style={{ fontFamily: 'var(--display)', fontSize: '15px', letterSpacing: '2.5px', color }}>
         {children}
       </span>
     </div>
@@ -21,89 +22,170 @@ function SectionLabel({ color = 'var(--a1)', children }) {
 
 function EmptyState({ message }) {
   return (
-    <div className="glass-card" style={{
+    <div style={{
+      border: '1px dashed var(--line2)', borderRadius: 'var(--radius-lg)',
       padding: '48px 24px', textAlign: 'center',
-      border: '1px dashed var(--line2)',
+      fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--dim)', letterSpacing: '1px',
     }}>
-      <div style={{ fontSize: '28px', marginBottom: '14px', opacity: 0.3 }}>◈</div>
-      <div style={{
-        fontFamily: 'var(--mono)', fontSize: '11px',
-        color: 'var(--dim)', letterSpacing: '1.2px',
-      }}>
-        {message}
-      </div>
+      <div style={{ fontSize: '24px', marginBottom: '12px', opacity: 0.4 }}>◈</div>
+      {message}
     </div>
   );
 }
 
+// ── AI Detection full result panel ──────────────────────────────────────────
+function AIDetectionResult({ result }) {
+  if (!result) return null;
+  const isAI = result.verdict === 'LIKELY AI';
+  const isHuman = result.verdict === 'LIKELY HUMAN';
+  const color = isAI ? 'var(--red)' : isHuman ? 'var(--green)' : 'var(--orange)';
+  const bgColor = isAI ? 'var(--red-dim)' : isHuman ? 'var(--green-dim)' : 'var(--orange-dim)';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', animation: 'fadeUp 0.4s ease both' }}>
+      {/* big verdict */}
+      <div style={{
+        border: `1px solid ${color}`,
+        borderLeft: `4px solid ${color}`,
+        borderRadius: 'var(--radius-lg)',
+        background: bgColor,
+        padding: '24px 28px',
+        display: 'flex', alignItems: 'center', gap: '24px',
+      }}>
+        <div style={{ textAlign: 'center', minWidth: '90px' }}>
+          <div style={{ fontFamily: 'var(--display)', fontSize: '56px', color, lineHeight: 1 }}>
+            {result.aiScore}
+          </div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color, letterSpacing: '2px', marginTop: '2px' }}>
+            % AI SCORE
+          </div>
+        </div>
+        <div style={{ width: '1px', height: '60px', background: `${color}44` }} />
+        <div>
+          <div style={{ fontFamily: 'var(--display)', fontSize: '32px', color, letterSpacing: '3px' }}>
+            {result.verdict}
+          </div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)', marginTop: '6px' }}>
+            {isAI ? 'High probability of AI-generated content detected.'
+              : isHuman ? 'Text exhibits strong human writing characteristics.'
+              : 'Mixed signals — cannot determine authorship with confidence.'}
+          </div>
+        </div>
+      </div>
+
+      {/* score bars */}
+      <div style={{
+        border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)',
+        background: 'var(--bg1)', overflow: 'hidden',
+      }}>
+        <div style={{
+          padding: '10px 16px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)',
+          fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px',
+        }}>AUTHORSHIP SCORES</div>
+        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {[
+            { label: 'AI-GENERATED', value: result.aiScore, color: 'var(--red)' },
+            { label: 'HUMAN-WRITTEN', value: result.humanScore, color: 'var(--green)' },
+          ].map(s => (
+            <div key={s.label}>
+              <div style={{
+                display: 'flex', justifyContent: 'space-between',
+                fontFamily: 'var(--mono)', fontSize: '10px',
+                color: s.color, marginBottom: '6px', letterSpacing: '1px',
+              }}>
+                <span>{s.label}</span><span>{s.value}%</span>
+              </div>
+              <div style={{ height: '6px', background: 'var(--bg3)', borderRadius: '3px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', width: `${s.value}%`, background: s.color,
+                  borderRadius: '3px', boxShadow: `0 0 8px ${s.color}`,
+                  transition: 'width 1.2s cubic-bezier(0.4,0,0.2,1)',
+                }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* signals */}
+      {result.signals?.length > 0 && (
+        <div style={{
+          border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)',
+          background: 'var(--bg1)', overflow: 'hidden',
+        }}>
+          <div style={{
+            padding: '10px 16px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)',
+            fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px',
+          }}>DETECTED SIGNALS</div>
+          <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {result.signals.map((s, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'flex-start', gap: '10px',
+                padding: '10px 12px',
+                background: 'var(--bg2)', border: '1px solid var(--line)',
+                borderRadius: 'var(--radius)',
+              }}>
+                <span style={{ color, fontFamily: 'var(--mono)', fontSize: '12px', flexShrink: 0 }}>
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.5' }}>
+                  {s}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [phase, setPhase] = useState('idle');
+  const [analysisMode, setAnalysisMode] = useState(null); // 'factcheck' | 'aidetect'
   const [pipelineStep, setPipelineStep] = useState(null);
   const [claims, setClaims] = useState([]);
   const [results, setResults] = useState([]);
   const [verifiedCount, setVerifiedCount] = useState(0);
   const [aiDetection, setAiDetection] = useState(null);
   const [error, setError] = useState(null);
-  const [articleMeta, setArticleMeta] = useState(null);
-  const dashboardRef = useRef(null);
 
   const handleAnalyze = async ({ mode, content }) => {
     try {
-      setPhase('running'); setError(null);
-      setClaims([]); setResults([]); setVerifiedCount(0);
-      setAiDetection(null); setArticleMeta(null);
+      setPhase('running'); setAnalysisMode(mode); setError(null);
+      setClaims([]); setResults([]); setVerifiedCount(0); setAiDetection(null);
 
-      // Smooth scroll to dashboard after a short delay
-      setTimeout(() => {
-        dashboardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 300);
+      if (mode === 'factcheck') {
+        setPipelineStep('extract');
+        await sleep(600);
+        setPipelineStep('search');
+        await sleep(600);
+        setPipelineStep('verify');
+        const combined = await extractAndVerifyAll(content);
+        const claimsOnly = combined.map(({ id, claim, context }) => ({ id, claim, context }));
+        setClaims(claimsOnly);
+        for (let i = 0; i < combined.length; i++) {
+          const { verdict, confidence, explanation, sources, searchQuery, conflicting } = combined[i];
+          setResults(prev => [...prev, { verdict, confidence, explanation, sources, searchQuery, conflicting }]);
+          setVerifiedCount(i + 1);
+          await sleep(300);
+        }
+        setPipelineStep('report');
+        // AI detection runs as part of factcheck too
+        const aiResult = await detectAIContent(content);
+        setAiDetection(aiResult);
 
-      let text = content;
-      if (mode === 'url') {
-        setPipelineStep('fetch');
-        const fetched = await fetchUrlText(content);
-        text = fetched.text;
-        setArticleMeta({ title: fetched.title, source: fetched.source });
+      } else {
+        // AI detection only mode — single call
+        setPipelineStep('extract');
+        await sleep(500);
+        setPipelineStep('verify');
+        const aiResult = await detectAIContent(content);
+        setAiDetection(aiResult);
+        setPipelineStep('report');
       }
 
-      // Step 1: Extract + Verify all claims in a single API call
-      setPipelineStep('extract');
-      const allResults = await extractAndVerifyAll(text);
-
-      // Extract just the claim parts for display
-      const extractedClaims = allResults.map(r => ({
-        id: r.id,
-        claim: r.claim,
-        context: r.context,
-      }));
-      setClaims(extractedClaims);
-
-      // Simulate the pipeline progression for visual effect
-      setPipelineStep('search');
-      await new Promise(r => setTimeout(r, 800));
-
-      setPipelineStep('verify');
-      // Progressively reveal results for a nice animation
-      const verificationResults = [];
-      for (let i = 0; i < allResults.length; i++) {
-        const item = allResults[i];
-        verificationResults.push({
-          verdict: item.verdict,
-          confidence: item.confidence,
-          explanation: item.explanation,
-          sources: item.sources,
-          searchQuery: item.searchQuery,
-          conflicting: item.conflicting,
-        });
-        setResults([...verificationResults]);
-        setVerifiedCount(i + 1);
-        await new Promise(r => setTimeout(r, 350));
-      }
-
-      // Step 2: AI Detection (separate call)
-      setPipelineStep('report');
-      const aiResult = await detectAIContent(text);
-      setAiDetection(aiResult);
       setPhase('done');
     } catch (err) {
       setError(err.message || 'An unexpected error occurred.');
@@ -112,238 +194,129 @@ export default function App() {
   };
 
   const handleReset = () => {
-    setPhase('idle'); setPipelineStep(null);
+    setPhase('idle'); setAnalysisMode(null); setPipelineStep(null);
     setClaims([]); setResults([]); setVerifiedCount(0);
-    setAiDetection(null); setError(null); setArticleMeta(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setAiDetection(null); setError(null);
   };
 
   const isLoading = phase === 'running';
 
   return (
-    <div style={{ minHeight: '100vh', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', position: 'relative' }}>
       <Background />
       <Header />
 
-      <main className="main-content" style={{
-        position: 'relative', zIndex: 1,
-        maxWidth: '1320px', margin: '0 auto', width: '100%',
-        padding: '36px 32px 80px',
-        flex: 1,
-      }}>
+      <main style={{ position: 'relative', zIndex: 1, maxWidth: '1280px', margin: '0 auto', padding: '32px 28px 80px' }}>
 
-        {/* ════ HERO (idle only) ════ */}
+        {/* HERO */}
         {phase === 'idle' && (
-          <div style={{ marginBottom: '40px', animation: 'fadeUp 0.5s ease both' }}>
-            <div className="hero-header" style={{
-              display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
-              flexWrap: 'wrap', gap: '20px', marginBottom: '24px',
-            }}>
+          <div style={{ marginBottom: '36px', animation: 'fadeUp 0.5s ease both' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
               <div>
-                <div style={{
-                  fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)',
-                  letterSpacing: '3px', marginBottom: '12px',
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                }}>
-                  <span style={{
-                    display: 'inline-block', width: '20px', height: '1px',
-                    background: 'var(--a1)',
-                  }} />
-                  INTELLIGENCE VERIFICATION PLATFORM
+                <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)', letterSpacing: '3px', marginBottom: '10px' }}>
+                  // INTELLIGENCE VERIFICATION PLATFORM
                 </div>
-                <h1 style={{
-                  fontFamily: 'var(--display)',
-                  fontSize: 'clamp(52px, 7vw, 96px)',
-                  letterSpacing: '5px', lineHeight: 0.9,
-                  color: 'var(--text)',
-                }}>
-                  <span className="hero-title">FACT</span><br />
-                  <span style={{ color: 'var(--a1)' }} className="hero-title">CHECK</span>
-                  <span className="hero-subtitle" style={{
-                    fontSize: 'clamp(24px, 3.5vw, 44px)', color: 'var(--dim)',
-                    marginLeft: '16px', letterSpacing: '3px',
-                  }}>ENGINE</span>
+                <h1 style={{ fontFamily: 'var(--display)', fontSize: 'clamp(48px,7vw,90px)', letterSpacing: '4px', lineHeight: 0.9, color: 'var(--text)' }}>
+                  FACT<br />
+                  <span style={{ color: 'var(--a1)' }}>CHECK</span>
+                  <span style={{ fontSize: 'clamp(24px,3.5vw,44px)', color: 'var(--dim)', marginLeft: '16px', letterSpacing: '2px' }}>ENGINE</span>
                 </h1>
               </div>
-              <div className="hero-stats" style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px',
-                maxWidth: '360px',
-              }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', maxWidth: '340px' }}>
                 {[
-                  { label: 'PIPELINE STEPS', val: '04', color: 'var(--a1)' },
-                  { label: 'VERDICTS', val: '04', color: 'var(--cyan)' },
+                  { label: 'FACT CHECK', val: 'CLAIMS', color: 'var(--a1)' },
+                  { label: 'AI DETECTION', val: 'AUTHORSHIP', color: 'var(--cyan)' },
                   { label: 'AI MODEL', val: 'GEMINI', color: 'var(--green)' },
                   { label: 'STATUS', val: 'ONLINE', color: 'var(--green)' },
-                ].map((s, i) => (
-                  <div key={s.label} className="glass-card" style={{
-                    padding: '12px 16px',
-                    animation: `fadeUp 0.4s ease ${0.1 + i * 0.08}s both`,
-                  }}>
-                    <div style={{
-                      fontFamily: 'var(--mono)', fontSize: '8px',
-                      color: 'var(--dim)', letterSpacing: '1.5px', marginBottom: '6px',
-                    }}>{s.label}</div>
-                    <div style={{
-                      fontFamily: 'var(--display)', fontSize: '20px',
-                      color: s.color, letterSpacing: '2px',
-                    }}>{s.val}</div>
+                ].map(s => (
+                  <div key={s.label} style={{ padding: '10px 14px', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', background: 'var(--bg1)' }}>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--dim)', letterSpacing: '1.5px', marginBottom: '4px' }}>{s.label}</div>
+                    <div style={{ fontFamily: 'var(--display)', fontSize: '18px', color: s.color, letterSpacing: '2px' }}>{s.val}</div>
                   </div>
                 ))}
               </div>
             </div>
-            {/* gradient divider */}
-            <div style={{
-              height: '1px', marginBottom: '32px',
-              background: 'linear-gradient(90deg, var(--a1-dim), var(--line2) 50%, transparent)',
-            }} />
+            <div style={{ height: '1px', background: 'var(--line2)', marginBottom: '28px' }} />
           </div>
         )}
 
-        {/* ════ RUNNING / DONE top bar ════ */}
+        {/* STATUS BAR */}
         {phase !== 'idle' && (
-          <div ref={dashboardRef} className="glass-card" style={{
+          <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '12px 20px', marginBottom: '28px',
-            flexWrap: 'wrap', gap: '12px',
-            animation: 'fadeUp 0.3s ease both',
+            padding: '10px 16px', marginBottom: '24px',
+            border: '1px solid var(--line2)', borderRadius: 'var(--radius)', background: 'var(--bg1)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {isLoading ? (
+              {isLoading
+                ? <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '2px solid var(--a1)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+                : <span style={{ color: 'var(--green)' }}>✓</span>}
+              <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: isLoading ? 'var(--a1)' : 'var(--green)', letterSpacing: '1px' }}>
+                {isLoading ? 'ANALYSIS IN PROGRESS...' : 'ANALYSIS COMPLETE'}
+              </span>
+              {analysisMode && (
                 <div style={{
-                  width: '14px', height: '14px', borderRadius: '50%',
-                  border: '2px solid var(--a1)', borderTopColor: 'transparent',
-                  animation: 'spin 0.7s linear infinite',
-                }} />
-              ) : (
-                <div style={{
-                  width: '14px', height: '14px', borderRadius: '50%',
-                  background: phase === 'error' ? 'var(--red)' : 'var(--green)',
-                  boxShadow: `0 0 8px ${phase === 'error' ? 'var(--red)' : 'var(--green)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '9px', color: '#060a0f', fontWeight: 'bold',
+                  padding: '2px 10px', border: `1px solid ${analysisMode === 'factcheck' ? 'var(--a1)' : 'var(--cyan)'}`,
+                  borderRadius: 'var(--radius)', fontFamily: 'var(--mono)', fontSize: '9px',
+                  color: analysisMode === 'factcheck' ? 'var(--a1)' : 'var(--cyan)', letterSpacing: '1px',
                 }}>
-                  {phase === 'error' ? '!' : '✓'}
+                  {analysisMode === 'factcheck' ? 'FACT CHECK MODE' : 'AI DETECTION MODE'}
                 </div>
               )}
-              <div>
-                <span style={{
-                  fontFamily: 'var(--mono)', fontSize: '11px',
-                  color: isLoading ? 'var(--a1)' : phase === 'error' ? 'var(--red)' : 'var(--green)',
-                  letterSpacing: '1.2px',
-                }}>
-                  {isLoading ? 'ANALYSIS IN PROGRESS...' :
-                   phase === 'error' ? 'ANALYSIS FAILED' : 'ANALYSIS COMPLETE'}
-                </span>
-                {articleMeta?.title && (
-                  <div style={{
-                    fontFamily: 'var(--mono)', fontSize: '10px',
-                    color: 'var(--dim)', marginTop: '3px',
-                    maxWidth: '400px', overflow: 'hidden',
-                    textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
-                    {articleMeta.title}
-                  </div>
-                )}
-              </div>
             </div>
-            <button onClick={handleReset} className="btn-ghost" id="reset-button">
-              ↩ NEW ANALYSIS
-            </button>
+            <button onClick={handleReset} style={{
+              padding: '6px 16px', background: 'transparent', border: '1px solid var(--line2)',
+              borderRadius: 'var(--radius)', color: 'var(--dim)', fontFamily: 'var(--mono)',
+              fontSize: '10px', letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s',
+            }}
+              onMouseEnter={e => { e.target.style.borderColor = 'var(--a1)'; e.target.style.color = 'var(--a1)'; }}
+              onMouseLeave={e => { e.target.style.borderColor = 'var(--line2)'; e.target.style.color = 'var(--dim)'; }}
+            >↩ NEW ANALYSIS</button>
           </div>
         )}
 
-        {/* ════ ERROR ════ */}
+        {/* ERROR */}
         {phase === 'error' && (
           <div style={{
-            padding: '14px 20px', marginBottom: '24px',
-            border: '1px solid rgba(255,69,96,0.35)',
-            borderLeft: '3px solid var(--red)',
-            borderRadius: 'var(--radius-lg)',
-            background: 'var(--red-dim)',
+            padding: '12px 16px', marginBottom: '20px',
+            border: '1px solid rgba(255,69,96,0.4)', borderLeft: '3px solid var(--red)',
+            borderRadius: 'var(--radius)', background: 'var(--red-dim)',
             fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--red)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: '12px', flexWrap: 'wrap',
-            animation: 'fadeUp 0.3s ease both',
+            display: 'flex', alignItems: 'center', gap: '10px',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '16px' }}>⚠</span>
-              <span>{error}</span>
-            </div>
-            <button
-              onClick={handleReset}
-              className="btn-ghost"
-              style={{
-                borderColor: 'rgba(255,69,96,0.3)',
-                color: 'var(--red)',
-              }}
-            >
-              ↻ TRY AGAIN
-            </button>
+            <span>⚠</span><span>{error}</span>
           </div>
         )}
 
-        {/* ════ IDLE / ERROR: Input ════ */}
+        {/* INPUT */}
         {(phase === 'idle' || phase === 'error') && (
           <InputPanel onAnalyze={handleAnalyze} loading={isLoading} />
         )}
 
-        {/* ════ RUNNING / DONE: Dashboard ════ */}
+        {/* DASHBOARD */}
         {(phase === 'running' || phase === 'done') && (
-          <div className="dashboard-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: '280px 1fr 280px',
-            gap: '24px',
-            alignItems: 'start',
-          }}>
-            {/* LEFT COLUMN — pipeline */}
-            <div className="dashboard-sidebar" style={{
-              display: 'flex', flexDirection: 'column', gap: '18px',
-              position: 'sticky', top: '100px',
-            }}>
-              <SectionLabel color="var(--cyan)">PIPELINE</SectionLabel>
-              <Pipeline
-                currentStep={phase === 'done' ? 'report' : pipelineStep}
-                claimCount={claims.length}
-                verifiedCount={verifiedCount}
-              />
+          <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 260px', gap: '20px', alignItems: 'start' }}>
 
-              {/* claim counter */}
-              {claims.length > 0 && (
-                <div className="glass-card" style={{ overflow: 'hidden' }}>
-                  <div style={{
-                    padding: '10px 16px', background: 'var(--bg2)',
-                    borderBottom: '1px solid var(--line)',
-                    fontFamily: 'var(--mono)', fontSize: '9px',
-                    color: 'var(--dim)', letterSpacing: '2px',
-                  }}>CLAIM INDEX</div>
-                  <div style={{
-                    padding: '12px 16px',
-                    display: 'flex', flexDirection: 'column', gap: '6px',
-                  }}>
+            {/* LEFT — pipeline */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '20px' }}>
+              <SectionLabel color="var(--cyan)">PIPELINE</SectionLabel>
+              <Pipeline currentStep={phase === 'done' ? 'report' : pipelineStep} claimCount={claims.length} verifiedCount={verifiedCount} />
+
+              {/* claim index only for factcheck */}
+              {analysisMode === 'factcheck' && claims.length > 0 && (
+                <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', background: 'var(--bg1)', overflow: 'hidden' }}>
+                  <div style={{ padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>
+                    CLAIM INDEX
+                  </div>
+                  <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {claims.map((c, i) => {
                       const r = results[i];
-                      const dotColor = !r ? 'var(--dim)' :
-                        r.verdict === 'TRUE' ? 'var(--green)' :
-                        r.verdict === 'FALSE' ? 'var(--red)' :
-                        r.verdict === 'PARTIALLY TRUE' ? 'var(--orange)' : 'var(--muted)';
+                      const dotColor = !r ? 'var(--dim)' : r.verdict === 'TRUE' ? 'var(--green)' : r.verdict === 'FALSE' ? 'var(--red)' : r.verdict === 'PARTIALLY TRUE' ? 'var(--orange)' : 'var(--muted)';
                       return (
-                        <div key={c.id} style={{
-                          display: 'flex', alignItems: 'center', gap: '10px',
-                          fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)',
-                          padding: '4px 0',
-                        }}>
-                          <div style={{
-                            width: '7px', height: '7px', borderRadius: '50%',
-                            background: dotColor, flexShrink: 0,
-                            boxShadow: r ? `0 0 6px ${dotColor}` : 'none',
-                            animation: !r && isLoading ? 'pulse 1s ease infinite' : 'none',
-                            transition: 'all 0.3s ease',
-                          }} />
-                          <span style={{
-                            overflow: 'hidden', textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap', maxWidth: '180px',
-                          }}>
-                            {c.claim.slice(0, 40)}{c.claim.length > 40 ? '…' : ''}
+                        <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)' }}>
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: dotColor, flexShrink: 0, boxShadow: r ? `0 0 4px ${dotColor}` : 'none', animation: !r && isLoading ? 'pulse 1s ease infinite' : 'none' }} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '150px' }}>
+                            {c.claim.slice(0, 38)}{c.claim.length > 38 ? '…' : ''}
                           </span>
                         </div>
                       );
@@ -353,58 +326,74 @@ export default function App() {
               )}
             </div>
 
-            {/* CENTER COLUMN — claims */}
+            {/* CENTER — results */}
             <div>
-              <SectionLabel>EXTRACTED CLAIMS</SectionLabel>
-              {claims.length === 0 ? (
-                <div className="glass-card" style={{
-                  padding: '48px', textAlign: 'center',
-                }}>
-                  <div style={{
-                    width: '32px', height: '32px', borderRadius: '50%',
-                    border: '2px solid var(--a1)', borderTopColor: 'transparent',
-                    animation: 'spin 0.8s linear infinite',
-                    margin: '0 auto 16px',
-                  }} />
-                  <div style={{
-                    fontFamily: 'var(--mono)', fontSize: '11px',
-                    color: 'var(--dim)', letterSpacing: '1.2px',
-                  }}>EXTRACTING CLAIMS...</div>
-                </div>
+              {analysisMode === 'factcheck' ? (
+                <>
+                  <SectionLabel>EXTRACTED CLAIMS</SectionLabel>
+                  {claims.length === 0 ? (
+                    <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-lg)', padding: '48px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--dim)', letterSpacing: '1px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '2px solid var(--a1)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
+                      PROCESSING...
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {claims.map((claim, i) => (
+                        <ClaimCard key={claim.id} claim={claim} result={results[i]} index={i} loading={isLoading && !results[i]} />
+                      ))}
+                    </div>
+                  )}
+                </>
               ) : (
-                <div style={{
-                  display: 'flex', flexDirection: 'column', gap: '12px',
-                }}>
-                  {claims.map((claim, i) => (
-                    <ClaimCard
-                      key={claim.id}
-                      claim={claim}
-                      result={results[i]}
-                      index={i}
-                      loading={isLoading && !results[i]}
-                    />
-                  ))}
-                </div>
+                <>
+                  <SectionLabel color="var(--cyan)">AI DETECTION RESULT</SectionLabel>
+                  {phase === 'done'
+                    ? <AIDetectionResult result={aiDetection} />
+                    : (
+                      <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-lg)', padding: '48px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--dim)', letterSpacing: '1px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '2px solid var(--cyan)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
+                        ANALYZING AUTHORSHIP...
+                      </div>
+                    )}
+                </>
               )}
             </div>
 
-            {/* RIGHT COLUMN — report */}
-            <div className="dashboard-sidebar" style={{
-              display: 'flex', flexDirection: 'column', gap: '18px',
-              position: 'sticky', top: '100px',
-            }}>
-              <SectionLabel color="var(--a1)">REPORT</SectionLabel>
-              {phase === 'done' ? (
-                <SummaryReport claims={claims} results={results} aiDetection={aiDetection} />
-              ) : (
-                <EmptyState message="REPORT GENERATES AFTER VERIFICATION" />
+            {/* RIGHT — summary report (factcheck only) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '20px' }}>
+              {analysisMode === 'factcheck' && (
+                <>
+                  <SectionLabel color="var(--a1)">REPORT</SectionLabel>
+                  {phase === 'done'
+                    ? <SummaryReport claims={claims} results={results} aiDetection={aiDetection} />
+                    : <EmptyState message="REPORT GENERATES AFTER VERIFICATION" />}
+                </>
+              )}
+              {analysisMode === 'aidetect' && phase === 'done' && aiDetection && (
+                <>
+                  <SectionLabel color="var(--cyan)">SUMMARY</SectionLabel>
+                  <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', background: 'var(--bg1)', overflow: 'hidden' }}>
+                    <div style={{ padding: '10px 16px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>QUICK STATS</div>
+                    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {[
+                        { label: 'AI PROBABILITY', val: `${aiDetection.aiScore}%`, color: 'var(--red)' },
+                        { label: 'HUMAN PROBABILITY', val: `${aiDetection.humanScore}%`, color: 'var(--green)' },
+                        { label: 'VERDICT', val: aiDetection.verdict, color: aiDetection.verdict === 'LIKELY AI' ? 'var(--red)' : aiDetection.verdict === 'LIKELY HUMAN' ? 'var(--green)' : 'var(--orange)' },
+                        { label: 'SIGNALS FOUND', val: `${aiDetection.signals?.length || 0}`, color: 'var(--cyan)' },
+                      ].map(s => (
+                        <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 'var(--radius)' }}>
+                          <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '1px' }}>{s.label}</span>
+                          <span style={{ fontFamily: 'var(--display)', fontSize: '14px', color: s.color, letterSpacing: '1px' }}>{s.val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </div>
         )}
       </main>
-
-      <Footer />
     </div>
   );
 }
