@@ -92,7 +92,7 @@ export default function AuthPage({ onSuccess }) {
             {/* bg glow */}
             <div style={{ position: 'absolute', bottom: '-60px', left: '-60px', width: '300px', height: '300px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(240,180,41,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-            <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '3px', marginBottom: '20px' }}>// ACCESS CONTROL</div>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '3px', marginBottom: '20px' }}> ACCESS CONTROL</div>
 
             <h1 style={{ fontFamily: 'var(--display)', fontSize: '56px', letterSpacing: '3px', lineHeight: 0.9, color: 'var(--text)', marginBottom: '20px' }}>
               VERIFY<br /><span style={{ color: 'var(--a1)' }}>TRUTH</span>

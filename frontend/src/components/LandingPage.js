@@ -149,7 +149,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
       <section className="landing-hero">
         <div className="landing-hero-inner">
           <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)', letterSpacing: '3px', marginBottom: '18px' }}>
-            // AI-POWERED INTELLIGENCE PLATFORM
+             AI-POWERED INTELLIGENCE PLATFORM
           </div>
           <h1 className="landing-hero-title">
             <span>VERIFY</span>
@@ -198,7 +198,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
       <Section id="features">
         <div className="landing-container">
           <div className="landing-section-header">
-            <div className="mono-label" style={{ marginBottom: '12px' }}>// CAPABILITIES</div>
+            <div className="mono-label" style={{ marginBottom: '12px' }}> CAPABILITIES</div>
             <h2 className="landing-section-title">INTELLIGENT <span style={{ color: 'var(--a1)' }}>VERIFICATION</span></h2>
             <p style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)', maxWidth: '560px', margin: '12px auto 0', lineHeight: '1.8', letterSpacing: '0.3px' }}>
               Six powerful modules working in concert to deliver thorough fact-checking analysis.
@@ -219,7 +219,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
       <Section id="how-it-works" style={{ background: 'rgba(11,17,24,0.5)' }}>
         <div className="landing-container">
           <div className="landing-section-header">
-            <div className="mono-label" style={{ marginBottom: '12px' }}>// PIPELINE</div>
+            <div className="mono-label" style={{ marginBottom: '12px' }}> PIPELINE</div>
             <h2 className="landing-section-title">HOW IT <span style={{ color: 'var(--cyan)' }}>WORKS</span></h2>
           </div>
           <div className="landing-pipeline">
@@ -235,7 +235,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
       <Section id="tech">
         <div className="landing-container">
           <div className="landing-section-header">
-            <div className="mono-label" style={{ marginBottom: '12px' }}>// POWERED BY</div>
+            <div className="mono-label" style={{ marginBottom: '12px' }}> POWERED BY</div>
             <h2 className="landing-section-title">BUILT WITH THE <span style={{ color: 'var(--green)' }}>BEST</span></h2>
           </div>
           <div className="landing-tech-grid">
@@ -253,7 +253,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
       <Section>
         <div className="landing-container" style={{ textAlign: 'center' }}>
           <div className="landing-cta-block">
-            <div className="mono-label" style={{ marginBottom: '16px' }}>// READY?</div>
+            <div className="mono-label" style={{ marginBottom: '16px' }}> READY?</div>
             <h2 style={{ fontFamily: 'var(--display)', fontSize: 'clamp(36px,6vw,72px)', letterSpacing: '4px', lineHeight: 0.95, color: 'var(--text)', marginBottom: '18px' }}>
               START <span className="gradient-text">VERIFYING</span> NOW
             </h2>
@@ -278,10 +278,10 @@ export default function LandingPage({ onEnter, isSignedIn }) {
         gap: '10px',
         fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)', background: 'var(--bg0)',
       }}>
-        <span style={{ letterSpacing: '1px' }}>© 2025 VERITAI · FACT VERIFICATION ENGINE</span>
+        <span style={{ letterSpacing: '1px' }}>© 2026 VERITAI · FACT VERIFICATION ENGINE</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ color: 'var(--green)', animation: 'pulse 1.5s ease infinite' }}>●</span>
-          <span>POWERED BY GEMINI 2.0 FLASH</span>
+          <span>POWERED BY OPENAI</span>
         </div>
       </footer>
     </div>
