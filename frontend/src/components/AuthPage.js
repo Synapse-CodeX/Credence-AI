@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { SignIn, SignUp, useAuth } from '@clerk/clerk-react';
 import Background from './Background';
 
@@ -6,7 +6,14 @@ export default function AuthPage({ onSuccess }) {
   const [tab, setTab] = React.useState('signin');
   const { isSignedIn } = useAuth();
 
-  // Auto-redirect as soon as Clerk marks user as signed in
+  const [vw, setVw] = useState(window.innerWidth);
+  useEffect(() => {
+    const handler = () => setVw(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  const isMobile = vw < 480;
+
   React.useEffect(() => {
     if (isSignedIn && onSuccess) onSuccess();
   }, [isSignedIn, onSuccess]);
@@ -35,7 +42,7 @@ export default function AuthPage({ onSuccess }) {
       dividerText: { color: '#6b7a9e' },
       socialButtonsBlockButton: { background: '#111820', borderColor: '#182030', color: '#e8edf5' },
       socialButtonsBlockButtonText: { color: '#e8edf5' },
-      footer: { display: 'none' }, // hide "Secured by Clerk" footer
+      footer: { display: 'none' },
     },
   };
 
@@ -46,38 +53,56 @@ export default function AuthPage({ onSuccess }) {
       {/* Header */}
       <div style={{
         position: 'relative', zIndex: 10,
-        display: 'flex', alignItems: 'center', gap: '16px',
-        padding: '20px 40px',
+        display: 'flex', alignItems: 'center', gap: '14px',
+        padding: isMobile ? '16px 16px' : '20px 40px',
         borderBottom: '1px solid var(--line2)',
         background: 'rgba(6,10,15,0.95)',
         backdropFilter: 'blur(20px)',
       }}>
-        <div style={{ width: '32px', height: '32px', border: '1px solid var(--a1)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 12px var(--a1-glow)' }}>
+        <div style={{
+          width: isMobile ? '26px' : '32px',
+          height: isMobile ? '26px' : '32px',
+          border: '1px solid var(--a1)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 12px var(--a1-glow)',
+        }}>
           <div style={{ width: '10px', height: '10px', background: 'var(--a1)', clipPath: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)', animation: 'pulse 2s ease infinite' }} />
         </div>
         <div>
-          <div style={{ fontFamily: 'var(--display)', fontSize: '22px', letterSpacing: '3px', color: 'var(--a1)', lineHeight: 1 }}>VERITAI</div>
+          <div style={{ fontFamily: 'var(--display)', fontSize: isMobile ? '18px' : '22px', letterSpacing: '3px', color: 'var(--a1)', lineHeight: 1 }}>VERITAI</div>
           <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>FACT VERIFICATION ENGINE</div>
         </div>
       </div>
 
       {/* Main */}
-      <div style={{ flex: 1, position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+      <div style={{
+        flex: 1, position: 'relative', zIndex: 1,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: isMobile ? '24px 14px' : '40px 24px',
+      }}>
         <div style={{ width: '100%', maxWidth: '460px', animation: 'fadeUp 0.5s ease both' }}>
 
           {/* Hero text */}
-          <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)', letterSpacing: '3px', marginBottom: '14px' }}>// ACCESS CONTROL</div>
-            <h1 style={{ fontFamily: 'var(--display)', fontSize: '52px', letterSpacing: '4px', lineHeight: 0.9, color: 'var(--text)', marginBottom: '16px' }}>
+          <div style={{ textAlign: 'center', marginBottom: isMobile ? '24px' : '36px' }}>
+            <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)', letterSpacing: '3px', marginBottom: '12px' }}>// ACCESS CONTROL</div>
+            <h1 style={{
+              fontFamily: 'var(--display)',
+              fontSize: isMobile ? '40px' : '52px',
+              letterSpacing: '4px', lineHeight: 0.9, color: 'var(--text)', marginBottom: '14px',
+            }}>
               VERIFY<br /><span style={{ color: 'var(--a1)' }}>TRUTH</span>
             </h1>
             <p style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--dim)', lineHeight: '1.7', letterSpacing: '0.5px' }}>
-              Sign in to access the AI-powered fact-checking<br />and content verification platform.
+              {isMobile
+                ? 'AI-powered fact-checking & content verification.'
+                : 'Sign in to access the AI-powered fact-checking\nand content verification platform.'}
             </p>
           </div>
 
           {/* Tab switcher */}
-          <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: 'var(--bg1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', padding: '4px' }}>
+          <div style={{
+            display: 'flex', gap: '4px', marginBottom: '16px',
+            background: 'var(--bg1)', border: '1px solid var(--line2)',
+            borderRadius: 'var(--radius-lg)', padding: '4px',
+          }}>
             {[{ id: 'signin', label: 'SIGN IN' }, { id: 'signup', label: 'SIGN UP' }].map(t => (
               <button key={t.id} onClick={() => setTab(t.id)} style={{
                 flex: 1, padding: '9px',
@@ -98,7 +123,7 @@ export default function AuthPage({ onSuccess }) {
               : <SignUp routing="hash" appearance={clerkAppearance} />}
           </div>
 
-          <div style={{ marginTop: '16px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '1px' }}>
+          <div style={{ marginTop: '14px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '1px' }}>
             🔒 SECURED BY CLERK · YOUR DATA IS PRIVATE
           </div>
         </div>

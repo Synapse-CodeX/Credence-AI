@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Background from './Background';
 
-// ── Intersection Observer hook for scroll animations ─────────────────────
 function useInView(options = {}) {
   const ref = useRef(null);
   const [inView, setInView] = useState(false);
@@ -10,14 +9,13 @@ function useInView(options = {}) {
     if (!el) return;
     const obs = new IntersectionObserver(([e]) => {
       if (e.isIntersecting) { setInView(true); obs.unobserve(el); }
-    }, { threshold: 0.15, ...options });
+    }, { threshold: 0.12, ...options });
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
   return [ref, inView];
 }
 
-// ── Animated counter ─────────────────────────────────────────────────────
 function Counter({ end, suffix = '', duration = 2000 }) {
   const [val, setVal] = useState(0);
   const [ref, inView] = useInView();
@@ -35,7 +33,6 @@ function Counter({ end, suffix = '', duration = 2000 }) {
   return <span ref={ref}>{val.toLocaleString()}{suffix}</span>;
 }
 
-// ── Section wrapper with fade-in ─────────────────────────────────────────
 function Section({ id, children, style }) {
   const [ref, inView] = useInView();
   return (
@@ -50,7 +47,6 @@ function Section({ id, children, style }) {
   );
 }
 
-// ── Feature card ─────────────────────────────────────────────────────────
 function FeatureCard({ icon, title, description, color, delay }) {
   const [ref, inView] = useInView();
   return (
@@ -74,7 +70,6 @@ function FeatureCard({ icon, title, description, color, delay }) {
   );
 }
 
-// ── Pipeline step ────────────────────────────────────────────────────────
 function PipelineStep({ number, title, description, color, isLast }) {
   const [ref, inView] = useInView();
   return (
@@ -86,7 +81,7 @@ function PipelineStep({ number, title, description, color, isLast }) {
         {!isLast && <div className="landing-step-line" style={{ background: `linear-gradient(to bottom, ${color}60, transparent)` }} />}
       </div>
       <div className="landing-step-content">
-        <h3 style={{ fontFamily: 'var(--display)', fontSize: '26px', letterSpacing: '3px', color }}>{title}</h3>
+        <h3 style={{ fontFamily: 'var(--display)', fontSize: 'clamp(20px,4vw,26px)', letterSpacing: '3px', color }}>{title}</h3>
         <p style={{ fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--muted)', lineHeight: '1.8', letterSpacing: '0.3px', marginTop: '8px' }}>
           {description}
         </p>
@@ -95,20 +90,24 @@ function PipelineStep({ number, title, description, color, isLast }) {
   );
 }
 
-// ── Tech badge ───────────────────────────────────────────────────────────
 function TechBadge({ name, icon, color }) {
   return (
     <div className="landing-tech-badge" style={{ borderColor: `${color}40` }}>
-      <span style={{ fontSize: '22px' }}>{icon}</span>
-      <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color, letterSpacing: '1.5px' }}>{name}</span>
+      <span style={{ fontSize: '20px' }}>{icon}</span>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color, letterSpacing: '1.5px', textAlign: 'center' }}>{name}</span>
     </div>
   );
 }
 
-// ═════════════════════════════════════════════════════════════════════════
-//  LANDING PAGE
-// ═════════════════════════════════════════════════════════════════════════
 export default function LandingPage({ onEnter, isSignedIn }) {
+  const [vw, setVw] = useState(window.innerWidth);
+  useEffect(() => {
+    const handler = () => setVw(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  const isMobile = vw < 640;
+
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -117,10 +116,10 @@ export default function LandingPage({ onEnter, isSignedIn }) {
     <div style={{ minHeight: '100vh', position: 'relative' }}>
       <Background />
 
-      {/* ─── NAVIGATION ──────────────────────────────────────────────── */}
+      {/* ─── NAVIGATION ── */}
       <nav className="landing-nav">
         <div className="landing-nav-inner">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div className="landing-logo-mark">
               <div style={{
                 width: '10px', height: '10px', background: 'var(--a1)',
@@ -129,41 +128,50 @@ export default function LandingPage({ onEnter, isSignedIn }) {
               }} />
             </div>
             <div>
-              <div style={{ fontFamily: 'var(--display)', fontSize: '22px', letterSpacing: '3px', color: 'var(--a1)', lineHeight: 1 }}>VERITAI</div>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--dim)', letterSpacing: '2px' }}>FACT VERIFICATION ENGINE</div>
+              <div style={{ fontFamily: 'var(--display)', fontSize: isMobile ? '18px' : '22px', letterSpacing: '3px', color: 'var(--a1)', lineHeight: 1 }}>VERITAI</div>
+              {!isMobile && <div style={{ fontFamily: 'var(--mono)', fontSize: '8px', color: 'var(--dim)', letterSpacing: '2px' }}>FACT VERIFICATION ENGINE</div>}
             </div>
           </div>
           <div className="landing-nav-links">
-            {['features', 'how-it-works', 'tech'].map(id => (
+            {!isMobile && ['features', 'how-it-works', 'tech'].map(id => (
               <button key={id} onClick={() => scrollTo(id)} className="landing-nav-link">
                 {id.replace(/-/g, ' ').toUpperCase()}
               </button>
             ))}
-            <button onClick={onEnter} className="landing-nav-cta">{isSignedIn ? 'OPEN APP' : 'GET STARTED'}</button>
+            <button onClick={onEnter} className="landing-nav-cta">
+              {isSignedIn ? 'OPEN APP' : 'GET STARTED'}
+            </button>
           </div>
         </div>
       </nav>
 
-      {/* ─── HERO ─────────────────────────────────────────────────────── */}
+      {/* ─── HERO ── */}
       <section className="landing-hero">
         <div className="landing-hero-inner">
-          <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--dim)', letterSpacing: '3px', marginBottom: '20px' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)', letterSpacing: '3px', marginBottom: '18px' }}>
             // AI-POWERED INTELLIGENCE PLATFORM
           </div>
           <h1 className="landing-hero-title">
             <span>VERIFY</span>
             <span className="gradient-text">TRUTH</span>
-            <span style={{ fontSize: 'clamp(28px,4vw,48px)', color: 'var(--dim)', letterSpacing: '2px' }}>IN REAL TIME</span>
+            <span style={{ fontSize: 'clamp(22px,4vw,48px)', color: 'var(--dim)', letterSpacing: '2px' }}>IN REAL TIME</span>
           </h1>
           <p className="landing-hero-subtitle">
-            Paste any article or text — VeritAI extracts every factual claim, cross-references
-            evidence from multiple sources, and delivers a color-coded accuracy report
-            with cited sources and confidence scores. Powered by Google Gemini.
+            {isMobile
+              ? 'Paste any text — VeritAI extracts claims, cross-references evidence, and delivers an accuracy report with sources.'
+              : 'Paste any article or text — VeritAI extracts every factual claim, cross-references evidence from multiple sources, and delivers a color-coded accuracy report with cited sources and confidence scores. Powered by Google Gemini.'}
           </p>
           <div className="landing-hero-actions">
-            <button onClick={onEnter} className="btn-primary landing-hero-btn">{isSignedIn ? 'OPEN DASHBOARD →' : 'START VERIFYING →'}</button>
-            <button onClick={() => scrollTo('how-it-works')} className="btn-ghost" style={{ padding: '12px 28px' }}>SEE HOW IT WORKS</button>
+            <button onClick={onEnter} className="btn-primary landing-hero-btn">
+              {isSignedIn ? 'OPEN DASHBOARD →' : 'START VERIFYING →'}
+            </button>
+            {!isMobile && (
+              <button onClick={() => scrollTo('how-it-works')} className="btn-ghost" style={{ padding: '12px 24px' }}>
+                SEE HOW IT WORKS
+              </button>
+            )}
           </div>
+
           {/* Stats */}
           <div className="landing-hero-stats">
             {[
@@ -173,10 +181,12 @@ export default function LandingPage({ onEnter, isSignedIn }) {
               { label: 'RESPONSE TIME', value: 3, suffix: 's AVG', color: 'var(--orange)' },
             ].map(s => (
               <div key={s.label} className="landing-stat-card">
-                <div style={{ fontFamily: 'var(--display)', fontSize: '36px', color: s.color, lineHeight: 1 }}>
+                <div style={{ fontFamily: 'var(--display)', fontSize: isMobile ? '28px' : '36px', color: s.color, lineHeight: 1 }}>
                   <Counter end={s.value} suffix={s.suffix} />
                 </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px', marginTop: '6px' }}>{s.label}</div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '1.5px', marginTop: '6px' }}>
+                  {s.label}
+                </div>
               </div>
             ))}
           </div>
@@ -184,14 +194,14 @@ export default function LandingPage({ onEnter, isSignedIn }) {
         <div className="landing-hero-grid" />
       </section>
 
-      {/* ─── FEATURES ─────────────────────────────────────────────────── */}
+      {/* ─── FEATURES ── */}
       <Section id="features">
         <div className="landing-container">
           <div className="landing-section-header">
             <div className="mono-label" style={{ marginBottom: '12px' }}>// CAPABILITIES</div>
             <h2 className="landing-section-title">INTELLIGENT <span style={{ color: 'var(--a1)' }}>VERIFICATION</span></h2>
-            <p style={{ fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--muted)', maxWidth: '600px', margin: '14px auto 0', lineHeight: '1.8', letterSpacing: '0.3px' }}>
-              Six powerful modules working in concert to deliver the most thorough fact-checking analysis available.
+            <p style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)', maxWidth: '560px', margin: '12px auto 0', lineHeight: '1.8', letterSpacing: '0.3px' }}>
+              Six powerful modules working in concert to deliver thorough fact-checking analysis.
             </p>
           </div>
           <div className="landing-features-grid">
@@ -205,7 +215,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
         </div>
       </Section>
 
-      {/* ─── HOW IT WORKS ──────────────────────────────────────────────── */}
+      {/* ─── HOW IT WORKS ── */}
       <Section id="how-it-works" style={{ background: 'rgba(11,17,24,0.5)' }}>
         <div className="landing-container">
           <div className="landing-section-header">
@@ -221,7 +231,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
         </div>
       </Section>
 
-      {/* ─── TECH STACK ────────────────────────────────────────────────── */}
+      {/* ─── TECH STACK ── */}
       <Section id="tech">
         <div className="landing-container">
           <div className="landing-section-header">
@@ -239,28 +249,35 @@ export default function LandingPage({ onEnter, isSignedIn }) {
         </div>
       </Section>
 
-      {/* ─── FINAL CTA ─────────────────────────────────────────────────── */}
+      {/* ─── FINAL CTA ── */}
       <Section>
         <div className="landing-container" style={{ textAlign: 'center' }}>
           <div className="landing-cta-block">
             <div className="mono-label" style={{ marginBottom: '16px' }}>// READY?</div>
-            <h2 style={{ fontFamily: 'var(--display)', fontSize: 'clamp(40px,6vw,72px)', letterSpacing: '4px', lineHeight: 0.95, color: 'var(--text)', marginBottom: '20px' }}>
+            <h2 style={{ fontFamily: 'var(--display)', fontSize: 'clamp(36px,6vw,72px)', letterSpacing: '4px', lineHeight: 0.95, color: 'var(--text)', marginBottom: '18px' }}>
               START <span className="gradient-text">VERIFYING</span> NOW
             </h2>
-            <p style={{ fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--muted)', maxWidth: '500px', margin: '0 auto 32px', lineHeight: '1.8', letterSpacing: '0.3px' }}>
+            <p style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)', maxWidth: '460px', margin: '0 auto 28px', lineHeight: '1.8', letterSpacing: '0.3px' }}>
               {isSignedIn
                 ? 'Welcome back. Your dashboard is ready — jump straight into fact-checking.'
                 : 'Join journalists, researchers, and curious minds who trust VeritAI to separate fact from fiction.'}
             </p>
-            <button onClick={onEnter} className="btn-primary landing-hero-btn" style={{ fontSize: '20px', padding: '16px 48px' }}>
+            <button onClick={onEnter} className="btn-primary landing-hero-btn" style={{ fontSize: isMobile ? '16px' : '20px', padding: isMobile ? '13px 32px' : '16px 48px' }}>
               {isSignedIn ? 'OPEN DASHBOARD →' : 'GET STARTED FREE →'}
             </button>
           </div>
         </div>
       </Section>
 
-      {/* ─── FOOTER ─────────────────────────────────────────────────────── */}
-      <footer style={{ borderTop: '1px solid var(--line)', padding: '24px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)', background: 'var(--bg0)' }}>
+      {/* ─── FOOTER ── */}
+      <footer style={{
+        borderTop: '1px solid var(--line)',
+        padding: isMobile ? '16px 14px' : '24px 48px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: '10px',
+        fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)', background: 'var(--bg0)',
+      }}>
         <span style={{ letterSpacing: '1px' }}>© 2025 VERITAI · FACT VERIFICATION ENGINE</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ color: 'var(--green)', animation: 'pulse 1.5s ease infinite' }}>●</span>
