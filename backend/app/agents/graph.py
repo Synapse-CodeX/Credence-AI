@@ -23,7 +23,11 @@ from pathlib import Path
 from typing import TypedDict, Annotated, Sequence, AsyncGenerator
 
 # ─── Add agent/ directory to the Python path ────────────────────────────────
-_AGENT_DIR = str(Path(__file__).resolve().parents[3] / "agent")
+# Local dev: agent/ is at project-root/agent/ (3 levels up from this file)
+# Docker:    agent/ is copied to /agent
+_LOCAL_AGENT_DIR = str(Path(__file__).resolve().parents[3] / "agent")
+_DOCKER_AGENT_DIR = "/agent"
+_AGENT_DIR = _LOCAL_AGENT_DIR if Path(_LOCAL_AGENT_DIR).is_dir() else _DOCKER_AGENT_DIR
 if _AGENT_DIR not in sys.path:
     sys.path.insert(0, _AGENT_DIR)
 

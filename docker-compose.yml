@@ -2,8 +2,8 @@ services:
   # ── FastAPI Backend ──────────────────────────────────────────────────────────
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: factify-backend
     restart: unless-stopped
     env_file:
@@ -16,9 +16,9 @@ services:
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8000/api/health"]
       interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   # ── React Frontend ─────────────────────────────────────────────────────────
   frontend:
@@ -28,6 +28,7 @@ services:
       args:
         REACT_APP_BACKEND_URL: ""
         REACT_APP_GEMINI_API_KEY: ${REACT_APP_GEMINI_API_KEY:-}
+        REACT_APP_CLERK_PUBLISHABLE_KEY: ${REACT_APP_CLERK_PUBLISHABLE_KEY:-}
     container_name: factify-frontend
     restart: unless-stopped
     expose:
@@ -50,7 +51,7 @@ services:
       - frontend
       - backend
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:80/"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
       interval: 30s
       timeout: 5s
       retries: 3

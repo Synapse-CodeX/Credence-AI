@@ -1,5 +1,5 @@
 # ── Stage 1: Build React app ─────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /build
 
@@ -7,7 +7,7 @@ WORKDIR /build
 COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm ci --silent
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -15,8 +15,10 @@ COPY . .
 # Build-time env vars — override at build with --build-arg
 ARG REACT_APP_BACKEND_URL=""
 ARG REACT_APP_GEMINI_API_KEY=""
+ARG REACT_APP_CLERK_PUBLISHABLE_KEY=""
 ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
 ENV REACT_APP_GEMINI_API_KEY=$REACT_APP_GEMINI_API_KEY
+ENV REACT_APP_CLERK_PUBLISHABLE_KEY=$REACT_APP_CLERK_PUBLISHABLE_KEY
 
 # Build production bundle
 RUN npm run build
