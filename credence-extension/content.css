@@ -1,0 +1,445 @@
+/* CredenceAI Extension Styles */
+
+#credence-fab {
+  position: fixed;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: #060a0f;
+  border: 1px solid #f0b429;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  color: #f0b429;
+  box-shadow: 0 4px 24px rgba(240,180,41,0.25), 0 0 0 1px rgba(240,180,41,0.1);
+  transition: all 0.15s ease;
+  user-select: none;
+  pointer-events: all;
+  animation: credence-fab-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+#credence-fab:hover {
+  background: #f0b429;
+  color: #060a0f;
+  box-shadow: 0 4px 32px rgba(240,180,41,0.45);
+  transform: scale(1.05);
+}
+
+#credence-fab .credence-fab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f0b429;
+  transition: background 0.15s;
+}
+
+#credence-fab:hover .credence-fab-dot {
+  background: #060a0f;
+}
+
+@keyframes credence-fab-in {
+  from { opacity: 0; transform: scale(0.7) translateY(4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Sidebar ── */
+#credence-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 100vh;
+  z-index: 2147483646;
+  background: #060a0f;
+  border-left: 1px solid #1a2235;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Courier New', monospace;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: -8px 0 40px rgba(0,0,0,0.6);
+}
+
+#credence-sidebar.credence-open {
+  transform: translateX(0);
+}
+
+#credence-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 52px;
+  border-bottom: 1px solid #1a2235;
+  background: #080d14;
+  flex-shrink: 0;
+}
+
+#credence-sidebar-header .credence-logo {
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 3px;
+  color: #f0b429;
+}
+
+#credence-sidebar-header .credence-subtitle {
+  font-size: 8px;
+  color: #4a5568;
+  letter-spacing: 2px;
+  margin-top: 2px;
+}
+
+#credence-close-btn {
+  background: transparent;
+  border: 1px solid #1a2235;
+  color: #4a5568;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+#credence-close-btn:hover {
+  border-color: #ff4560;
+  color: #ff4560;
+  background: rgba(255,69,96,0.08);
+}
+
+#credence-selected-text-box {
+  margin: 14px;
+  padding: 10px 12px;
+  background: #0b1118;
+  border: 1px solid #1a2235;
+  border-left: 3px solid #f0b429;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #8899aa;
+  line-height: 1.6;
+  max-height: 80px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+#credence-selected-text-box::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 24px;
+  background: linear-gradient(transparent, #0b1118);
+}
+
+#credence-selected-text-label {
+  font-size: 8px;
+  color: #4a5568;
+  letter-spacing: 2px;
+  margin: 14px 14px 6px;
+  flex-shrink: 0;
+}
+
+#credence-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 14px 14px;
+}
+
+#credence-body::-webkit-scrollbar { width: 4px; }
+#credence-body::-webkit-scrollbar-track { background: transparent; }
+#credence-body::-webkit-scrollbar-thumb { background: #1a2235; border-radius: 2px; }
+
+/* Loading state */
+#credence-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  gap: 16px;
+}
+
+.credence-spinner {
+  width: 36px;
+  height: 36px;
+  border: 2px solid #1a2235;
+  border-top-color: #f0b429;
+  border-radius: 50%;
+  animation: credence-spin 0.7s linear infinite;
+}
+
+@keyframes credence-spin {
+  to { transform: rotate(360deg); }
+}
+
+.credence-loading-text {
+  font-size: 10px;
+  color: #4a5568;
+  letter-spacing: 2px;
+  animation: credence-pulse 1.5s ease infinite;
+}
+
+@keyframes credence-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.credence-step {
+  font-size: 9px;
+  color: #f0b429;
+  letter-spacing: 1.5px;
+  margin-top: 4px;
+}
+
+/* Stats bar */
+#credence-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+  padding-top: 4px;
+}
+
+.credence-stat-card {
+  background: #0b1118;
+  border: 1px solid #1a2235;
+  border-radius: 4px;
+  padding: 8px 6px;
+  text-align: center;
+}
+
+.credence-stat-val {
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.credence-stat-label {
+  font-size: 7px;
+  color: #4a5568;
+  letter-spacing: 1.5px;
+  margin-top: 3px;
+}
+
+/* Section title */
+.credence-section-title {
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  color: #4a5568;
+  margin: 14px 0 8px;
+  border-left: 2px solid #f0b429;
+  padding-left: 8px;
+}
+
+/* Claim card */
+.credence-claim-card {
+  background: #0b1118;
+  border: 1px solid #1a2235;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  animation: credence-fade-up 0.3s ease both;
+}
+
+@keyframes credence-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.credence-claim-header {
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.credence-claim-num {
+  font-size: 9px;
+  color: #4a5568;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.credence-claim-text {
+  font-size: 11px;
+  color: #c8d6e8;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.credence-verdict-badge {
+  font-size: 8px;
+  letter-spacing: 1px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: bold;
+  margin-top: 1px;
+}
+
+.credence-verdict-TRUE    { color: #00e887; border: 1px solid #00e887; background: rgba(0,232,135,0.08); }
+.credence-verdict-FALSE   { color: #ff4560; border: 1px solid #ff4560; background: rgba(255,69,96,0.08); }
+.credence-verdict-PARTIAL { color: #ff8c42; border: 1px solid #ff8c42; background: rgba(255,140,66,0.08); }
+.credence-verdict-UNVERIFIABLE { color: #666; border: 1px solid #444; background: rgba(100,100,100,0.08); }
+
+.credence-claim-body {
+  padding: 0 12px 10px;
+  border-top: 1px solid #0f1824;
+  display: none;
+}
+
+.credence-claim-body.credence-expanded {
+  display: block;
+}
+
+.credence-conf-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  color: #4a5568;
+  letter-spacing: 1px;
+  margin: 8px 0 4px;
+}
+
+.credence-conf-bar-bg {
+  height: 3px;
+  background: #0f1824;
+  border-radius: 2px;
+  margin-bottom: 8px;
+}
+
+.credence-conf-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.credence-explanation {
+  font-size: 10px;
+  color: #6b7a8d;
+  line-height: 1.6;
+  padding: 8px 10px;
+  background: #060a0f;
+  border: 1px solid #0f1824;
+  border-radius: 3px;
+}
+
+.credence-sources {
+  margin-top: 6px;
+}
+
+.credence-source-item {
+  font-size: 9px;
+  color: #00d4ff;
+  padding: 3px 8px;
+  background: rgba(0,212,255,0.04);
+  border: 1px solid rgba(0,212,255,0.12);
+  border-radius: 3px;
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+}
+
+.credence-source-item:hover {
+  background: rgba(0,212,255,0.1);
+}
+
+/* Error state */
+#credence-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  gap: 12px;
+  text-align: center;
+}
+
+.credence-error-icon {
+  font-size: 28px;
+  opacity: 0.4;
+}
+
+.credence-error-msg {
+  font-size: 10px;
+  color: #ff4560;
+  letter-spacing: 1px;
+  line-height: 1.6;
+}
+
+/* Empty state */
+#credence-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 48px 20px;
+  gap: 12px;
+  text-align: center;
+}
+
+.credence-empty-icon {
+  font-size: 32px;
+  opacity: 0.2;
+}
+
+.credence-empty-msg {
+  font-size: 10px;
+  color: #4a5568;
+  letter-spacing: 1px;
+  line-height: 1.8;
+}
+
+/* Overlay */
+#credence-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483645;
+  background: rgba(6,10,15,0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#credence-overlay.credence-open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Accuracy score ring */
+.credence-score-ring {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0 8px;
+}
+
+.credence-score-number {
+  font-size: 42px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+
+.credence-score-label {
+  font-size: 8px;
+  color: #4a5568;
+  letter-spacing: 2px;
+  margin-top: 4px;
+}

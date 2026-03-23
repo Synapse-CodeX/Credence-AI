@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "CredenceAI Fact Checker",
+  "version": "1.0.0",
+  "description": "Select any text on any webpage and instantly fact-check it with CredenceAI.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:8000/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "CredenceAI Fact Checker"
+  }
+}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 260px;
+    background: #060a0f;
+    color: #e8edf5;
+    font-family: 'Courier New', monospace;
+    padding: 20px;
+  }
+  .logo { font-size: 18px; font-weight: bold; color: #f0b429; letter-spacing: 3px; }
+  .subtitle { font-size: 8px; color: #4a5568; letter-spacing: 2px; margin-top: 3px; }
+  .divider { height: 1px; background: #1a2235; margin: 14px 0; }
+  .instruction { font-size: 10px; color: #6b7a8d; line-height: 1.8; letter-spacing: 0.5px; }
+  .step { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .step-num { width: 18px; height: 18px; border: 1px solid #f0b429; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #f0b429; flex-shrink: 0; margin-top: 1px; }
+  .step-text { font-size: 10px; color: #8899aa; line-height: 1.5; }
+  .status { margin-top: 14px; padding: 8px 10px; background: #0b1118; border: 1px solid #1a2235; border-radius: 4px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #00e887; display: inline-block; margin-right: 6px; box-shadow: 0 0 6px #00e887; }
+  .status-text { font-size: 9px; color: #4a5568; letter-spacing: 1.5px; }
+  .footer { margin-top: 14px; font-size: 8px; color: #2a3245; letter-spacing: 1px; text-align: center; }
+</style>
+</head>
+<body>
+  <div class="logo">CredenceAI</div>
+  <div class="subtitle">FACT VERIFICATION ENGINE</div>
+  <div class="divider"></div>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-text">Go to any webpage — Wikipedia, news article, blog post</div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-text">Select any text you want to fact-check</div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-text">Click the <strong style="color:#f0b429">FACT CHECK</strong> button that appears</div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-text">Results appear in a sidebar panel instantly</div>
+  </div>
+  <div class="status">
+    <span class="status-dot"></span>
+    <span class="status-text">BACKEND: localhost:8000</span>
+  </div>
+  <div class="footer">CredenceAI · SELECT · VERIFY · TRUST</div>
+</body>
+</html>
