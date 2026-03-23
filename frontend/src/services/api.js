@@ -103,7 +103,7 @@ export async function checkAIText(text) {
       aiScore: Math.round(data.ai_probability * 100),
       humanScore: Math.round((1 - data.ai_probability) * 100),
       verdict: data.verdict === "AI" ? "LIKELY AI" : data.verdict === "Human" ? "LIKELY HUMAN" : "MIXED",
-      signals: data.signals.map(s => JSON.stringify(s)),
+      signals: data.signals || [],
     },
     bias: null
   };
@@ -168,7 +168,7 @@ export function analyzeAll(content) {
             aiScore: Math.round((ai.ai_probability || 0) * 100),
             humanScore: Math.round((1 - (ai.ai_probability || 0)) * 100),
             verdict: ai.verdict === "AI" ? "LIKELY AI" : ai.verdict === "Human" ? "LIKELY HUMAN" : "MIXED",
-            signals: (ai.signals || []).map(s => typeof s === 'string' ? s : JSON.stringify(s))
+            signals: ai.signals || []
           };
         }
 

@@ -7,7 +7,7 @@ const STEPS = [
   { id: 'report',  code: '04', label: 'REPORT GENERATION',  sub: 'Compiling accuracy report',              icon: '◆' },
 ];
 
-export default function Pipeline({ currentStep, claimCount, verifiedCount, isDone }) {
+export default function Pipeline({ currentStep, claimCount, verifiedCount, isDone, isAIDetect }) {
   const currentIdx = STEPS.findIndex(s => s.id === currentStep);
 
   // allDone: explicit prop OR naturally completed
@@ -49,22 +49,24 @@ export default function Pipeline({ currentStep, claimCount, verifiedCount, isDon
 
       <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {STEPS.map((step, i) => {
-          const done = allDone || (currentIdx > i);
-          const active = !allDone && i === currentIdx;
+          const isSkippedStep = isAIDetect && (step.id === 'extract' || step.id === 'search');
+          const done = !isSkippedStep && (allDone || (currentIdx > i));
+          const active = !isSkippedStep && !allDone && i === currentIdx;
 
           return (
             <div key={step.id}>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '12px',
                 padding: '12px 14px', borderRadius: 'var(--radius)',
-                background: active ? 'rgba(240,180,41,0.06)' : done ? 'rgba(0,232,135,0.04)' : 'transparent',
+                background: active ? 'rgba(240,180,41,0.06)' : done ? 'rgba(0,232,135,0.04)' : isSkippedStep ? 'rgba(255,255,255,0.02)' : 'transparent',
                 border: `1px solid ${active ? 'rgba(240,180,41,0.3)' : done ? 'rgba(0,232,135,0.15)' : 'var(--line)'}`,
                 transition: 'all 0.3s ease',
+                opacity: isSkippedStep ? 0.5 : 1,
               }}>
                 {/* step number */}
                 <div style={{
                   fontFamily: 'var(--mono)', fontSize: '11px',
-                  color: done ? 'var(--green)' : active ? 'var(--a1)' : 'var(--bg3)',
+                  color: done ? 'var(--green)' : active ? 'var(--a1)' : isSkippedStep ? 'var(--muted)' : 'var(--bg3)',
                   width: '20px', flexShrink: 0,
                 }}>{step.code}</div>
 
@@ -83,6 +85,8 @@ export default function Pipeline({ currentStep, claimCount, verifiedCount, isDon
                       border: '2px solid var(--a1)', borderTopColor: 'transparent',
                       animation: 'spin 0.7s linear infinite',
                     }} />
+                  ) : isSkippedStep ? (
+                    <span style={{ color: 'var(--dim)', fontSize: '10px' }}>—</span>
                   ) : (
                     <span style={{ color: 'var(--dim)', fontSize: '12px', opacity: 0.5 }}>{step.icon}</span>
                   )}
@@ -92,7 +96,7 @@ export default function Pipeline({ currentStep, claimCount, verifiedCount, isDon
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontFamily: 'var(--mono)', fontSize: '11px', letterSpacing: '1px',
-                    color: done ? 'var(--green)' : active ? 'var(--a1)' : 'var(--dim)',
+                    color: done ? 'var(--green)' : active ? 'var(--a1)' : isSkippedStep ? 'var(--muted)' : 'var(--dim)',
                     fontWeight: active ? '500' : '400',
                     transition: 'color 0.3s',
                   }}>{step.label}</div>
@@ -104,17 +108,17 @@ export default function Pipeline({ currentStep, claimCount, verifiedCount, isDon
                       ? claimCount > 0
                         ? `verifying claim ${Math.min(verifiedCount + 1, claimCount)} of ${claimCount}`
                         : `verifying... ${verifiedCount > 0 ? `(${verifiedCount} done)` : ''}`
-                      : step.sub}
+                      : isSkippedStep ? 'Not applicable for AI detection' : step.sub}
                   </div>
                 </div>
 
                 {/* status badge */}
                 <div style={{
                   fontFamily: 'var(--mono)', fontSize: '9px', letterSpacing: '1.2px', flexShrink: 0,
-                  color: done ? 'var(--green)' : active ? 'var(--a1)' : 'transparent',
+                  color: done ? 'var(--green)' : active ? 'var(--a1)' : isSkippedStep ? 'var(--dim)' : 'transparent',
                   animation: active ? 'pulse 1.2s ease infinite' : 'none',
                 }}>
-                  {done ? 'DONE' : active ? 'RUN' : '—'}
+                  {done ? 'DONE' : active ? 'RUN' : isSkippedStep ? 'SKIP' : '—'}
                 </div>
               </div>
 

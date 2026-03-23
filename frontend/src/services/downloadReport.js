@@ -24,11 +24,31 @@ function openAndPrint(html, filename) {
 
 // Wraps a source string in an <a> tag if it looks like a URL
 function linkify(str) {
-  const escaped = str.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const escaped = (str || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const urlRegex = /https?:\/\/[^\s<>"]+/g;
   return escaped.replace(urlRegex, (url) =>
     `<a href="${url}" target="_blank" style="color:inherit;text-decoration:underline;word-break:break-all;">${url}</a>`
   );
+}
+
+function formatSignal(s) {
+  if (typeof s === 'string') {
+    try {
+      const parsed = JSON.parse(s);
+      if (parsed && typeof parsed === 'object' && parsed.name) {
+        const name = parsed.name.replace(/_/g, ' ').toUpperCase();
+        const weight = parsed.weight !== undefined ? ` (${Math.round(parsed.weight * 100)}% MATCH)` : '';
+        return `${name}${weight}`;
+      }
+    } catch (e) {}
+    return s.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  if (s && typeof s === 'object' && s.name) {
+    const name = s.name.replace(/_/g, ' ').toUpperCase();
+    const weight = s.weight !== undefined ? ` (${Math.round(s.weight * 100)}% MATCH)` : '';
+    return `${name}${weight}`;
+  }
+  return String(s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 const LIGHT = `
@@ -292,7 +312,7 @@ ${aiDetection ? `
   <div class="ai-card"><div class="ai-val" style="color:#00a86b">${aiDetection.humanScore}%</div><div class="ai-label">HUMAN-WRITTEN</div></div>
 </div>
 <div style="display:inline-block;font-size:10px;padding:4px 12px;border:1px solid var(--border);color:var(--text2);letter-spacing:1.5px;margin-bottom:10px">${aiDetection.verdict}</div>
-${aiDetection.signals?.length ? aiDetection.signals.map((s,i)=>`<div class="signal-item"><span style="color:#c0820a;min-width:24px">${String(i+1).padStart(2,'0')}</span>${s.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`).join('') : ''}
+${aiDetection.signals?.length ? aiDetection.signals.map((s,i)=>`<div class="signal-item"><span style="color:#c0820a;min-width:24px">${String(i+1).padStart(2,'0')}</span>${formatSignal(s)}</div>`).join('') : ''}
 ` : ''}
 
 ${bias ? `
@@ -353,7 +373,7 @@ ${aiDetection ? `
 
 ${aiDetection.signals?.length ? `
 <div class="section-title cyan">DETECTED SIGNALS</div>
-${aiDetection.signals.map((s,i)=>`<div class="signal-item"><span style="color:#00a8cc;min-width:24px">${String(i+1).padStart(2,'0')}</span>${s.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`).join('')}` : ''}
+${aiDetection.signals.map((s,i)=>`<div class="signal-item"><span style="color:#00a8cc;min-width:24px">${String(i+1).padStart(2,'0')}</span>${formatSignal(s)}</div>`).join('')}` : ''}
 ` : ''}
 
 <div class="footer">CredenceAI · AI DETECTION ENGINE &nbsp;|&nbsp; ${dateStr} &nbsp;|&nbsp; Powered by Google Gemini</div>

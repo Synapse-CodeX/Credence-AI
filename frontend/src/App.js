@@ -28,9 +28,9 @@ function normalizeConf(val) {
 function mapStep(step) {
   if (!step) return null;
   const s = step.toLowerCase();
-  if (s.includes('extract') || s.includes('claim'))   return 'extract';
+  if (s.includes('extract') || s.includes('claim')) return 'extract';
   if (s.includes('search') || s.includes('evidence') || s.includes('retriev')) return 'search';
-  if (s.includes('verif') || s.includes('check'))     return 'verify';
+  if (s.includes('verif') || s.includes('check')) return 'verify';
   if (s.includes('report') || s.includes('generat') || s.includes('compil')) return 'report';
   return null;
 }
@@ -42,6 +42,32 @@ function SectionLabel({ color = 'var(--a1)', children }) {
       <span style={{ fontFamily: 'var(--display)', fontSize: '15px', letterSpacing: '2.5px', color }}>{children}</span>
     </div>
   );
+}
+
+function renderSignal(s) {
+  if (typeof s === 'string') {
+    try {
+      const parsed = JSON.parse(s);
+      if (parsed && typeof parsed === 'object' && parsed.name) {
+        return (
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+            <span>{parsed.name.replace(/_/g, ' ').toUpperCase()}</span>
+            {parsed.weight !== undefined && <span style={{ opacity: 0.6 }}>{Math.round(parsed.weight * 100)}% MATCH</span>}
+          </div>
+        );
+      }
+    } catch (e) {}
+    return s;
+  }
+  if (s && typeof s === 'object' && s.name) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+        <span>{s.name.replace(/_/g, ' ').toUpperCase()}</span>
+        {s.weight !== undefined && <span style={{ opacity: 0.6 }}>{Math.round(s.weight * 100)}% MATCH</span>}
+      </div>
+    );
+  }
+  return String(s);
 }
 
 function EmptyState({ message }) {
@@ -99,7 +125,7 @@ function AIDetectionResult({ result }) {
             {result.signals.map((s, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 'var(--radius)' }}>
                 <span style={{ color, fontFamily: 'var(--mono)', fontSize: '12px', flexShrink: 0 }}>{String(i + 1).padStart(2, '00')}</span>
-                <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.5' }}>{s}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.5', flexGrow: 1 }}>{renderSignal(s)}</span>
               </div>
             ))}
           </div>
@@ -167,7 +193,7 @@ function ImageAIResult({ result, previewUrl }) {
           <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {result.signals.map((s, i) => (
               <div key={i} style={{ display: 'flex', gap: '10px', padding: '8px 12px', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)' }}>
-                <span style={{ color, flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>{s}
+                <span style={{ color, flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>{renderSignal(s)}
               </div>
             ))}
           </div>
@@ -297,14 +323,14 @@ export default function App() {
             if (stepData.data?.verified_claims || stepData.data?.verdicts) {
               const vcs = stepData.data.verified_claims || stepData.data.verdicts || [];
               const mapped = vcs.map(c => ({
-                verdict:     c.verdict     || 'UNVERIFIABLE',
-                confidence:  normalizeConf(c.confidence ?? c.confidence_score),
+                verdict: c.verdict || 'UNVERIFIABLE',
+                confidence: normalizeConf(c.confidence ?? c.confidence_score),
                 explanation: c.explanation || c.reasoning || '',
-                sources:     c.sources     || c.cited_sources || c.evidence_urls || [],
+                sources: c.sources || c.cited_sources || c.evidence_urls || [],
                 searchQuery: c.search_query || c.searchQuery || '',
                 conflicting: c.conflicting || false,
                 timeSensitive: c.time_sensitive || false,
-                difficulty:  c.difficulty  || 'MEDIUM',
+                difficulty: c.difficulty || 'MEDIUM',
                 tavilyAnswer: c.tavily_answer || '',
               }));
               setResults(mapped);
@@ -324,14 +350,14 @@ export default function App() {
             }));
 
             const resultsMap = rawClaims.map(c => ({
-              verdict:     c.verdict     || 'UNVERIFIABLE',
-              confidence:  normalizeConf(c.confidence ?? c.confidence_score),
+              verdict: c.verdict || 'UNVERIFIABLE',
+              confidence: normalizeConf(c.confidence ?? c.confidence_score),
               explanation: c.explanation || c.reasoning || '',
-              sources:     c.sources     || c.cited_sources || c.evidence_urls || [],
+              sources: c.sources || c.cited_sources || c.evidence_urls || [],
               searchQuery: c.search_query || c.searchQuery || '',
               conflicting: c.conflicting || false,
               timeSensitive: c.time_sensitive || false,
-              difficulty:  c.difficulty  || 'MEDIUM',
+              difficulty: c.difficulty || 'MEDIUM',
               tavilyAnswer: c.tavily_answer || '',
             }));
 
@@ -343,10 +369,10 @@ export default function App() {
             // AI detection from report
             if (report.ai_detection) {
               setAiDetection({
-                aiScore:    normalizeConf(report.ai_detection.ai_probability),
+                aiScore: normalizeConf(report.ai_detection.ai_probability),
                 humanScore: 100 - normalizeConf(report.ai_detection.ai_probability),
-                verdict:    report.ai_detection.verdict || 'UNCERTAIN',
-                signals:    report.ai_detection.signals || [],
+                verdict: report.ai_detection.verdict || 'UNCERTAIN',
+                signals: report.ai_detection.signals || [],
               });
             }
             if (report.bias) setBiasData(report.bias);
@@ -391,7 +417,7 @@ export default function App() {
       : `🤖 CredenceAI AI Detection Report\n\nAI Score: ${aiDetection?.aiScore || 0}%\nVerdict: ${aiDetection?.verdict || 'UNCERTAIN'}\n\nAnalyzed with Gemini AI\n\n#CredenceAI #AIDetection`;
     setShowShareModal(true);
     if (navigator.share) {
-      try { await navigator.share({ title: 'CredenceAI Report', text: shareText }); setShowShareModal(false); return; } catch {}
+      try { await navigator.share({ title: 'CredenceAI Report', text: shareText }); setShowShareModal(false); return; } catch { }
     }
   };
 
@@ -542,6 +568,7 @@ export default function App() {
                 currentStep={phase === 'done' ? 'report' : pipelineStep}
                 claimCount={claims.length}
                 verifiedCount={verifiedCount}
+                isAIDetect={analysisMode === 'aidetect'}
               />
 
               {analysisMode === 'factcheck' && claims.length > 0 && (
