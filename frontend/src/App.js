@@ -260,7 +260,11 @@ export default function App() {
       setPhase('running'); setAnalysisMode(mode); setError(null);
       setClaims([]); setResults([]); setVerifiedCount(0);
       setAiDetection(null); setBiasData(null);
-      setImageResult(null); setImagePreviewUrl(null);
+      setImageResult(null);
+      // Only clear preview if no new image is provided
+      if (!imageFile) setImagePreviewUrl(null);
+      else setImagePreviewUrl(URL.createObjectURL(imageFile));
+      
       setInputText(content || '');
       setPipelineStep('extract');
 
@@ -282,7 +286,6 @@ export default function App() {
         };
         setImageResult(imgResultData);
         setAiDetection(imgResultData);
-        setImagePreviewUrl(URL.createObjectURL(imageFile));
         setPipelineStep('report');
         saveAnalysis(userIdRef.current, {
           mode: 'aidetect',
