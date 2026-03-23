@@ -287,6 +287,7 @@ export default function App() {
         setImageResult(imgResultData);
         setAiDetection(imgResultData);
         setPipelineStep('report');
+        setPhase('done');
         saveAnalysis(userIdRef.current, {
           mode: 'aidetect',
           snippet: `[IMAGE] ${imageName || 'uploaded image'}`,
@@ -294,7 +295,6 @@ export default function App() {
           verdict: imgResult.pipeline.finalVerdict,
         });
         refreshHistory();
-        setPhase('done');
         return;
       }
 
@@ -306,6 +306,7 @@ export default function App() {
         setAiDetection(analysis.aiDetection);
         setBiasData(analysis.bias);
         setPipelineStep('report');
+        setPhase('done');
         saveAnalysis(userIdRef.current, {
           mode: 'aidetect',
           snippet: content.slice(0, 60) + (content.length > 60 ? '...' : ''),
@@ -313,7 +314,6 @@ export default function App() {
           verdict: analysis.aiDetection.verdict,
         });
         refreshHistory();
-        setPhase('done');
         return;
       }
 
@@ -384,8 +384,9 @@ export default function App() {
             setResults(resultsMap);
             setVerifiedCount(resultsMap.length);
             setPipelineStep('report');
-
-            // AI detection from report
+            setPhase('done');
+            
+            // AI detection from report (lower priority for UI layout transition)
             if (report.ai_detection) {
               setAiDetection({
                 aiScore: normalizeConf(report.ai_detection.ai_probability),
@@ -407,7 +408,6 @@ export default function App() {
               accuracyScore, verdicts, claimCount: resultsMap.length,
             });
             refreshHistory();
-            setPhase('done');
           },
 
           // ── onError ──────────────────────────────────────────────────
@@ -595,6 +595,7 @@ export default function App() {
                 currentStep={phase === 'done' ? 'report' : pipelineStep}
                 claimCount={claims.length}
                 verifiedCount={verifiedCount}
+                isDone={phase === 'done'}
                 isAIDetect={analysisMode === 'aidetect'}
                 isImage={!!imagePreviewUrl || !!imageResult}
               />

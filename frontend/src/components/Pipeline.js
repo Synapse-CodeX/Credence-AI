@@ -10,10 +10,8 @@ const STEPS = [
 export default function Pipeline({ currentStep, claimCount, verifiedCount, isDone, isAIDetect, isImage }) {
   const currentIdx = STEPS.findIndex(s => s.id === currentStep);
 
-  // allDone: explicit prop OR naturally completed
-  const allDone = isDone ||
-    currentStep === 'report' ||
-    (claimCount > 0 && verifiedCount >= claimCount && currentStep === 'verify');
+  // allDone: explicit prop from parent (usually phase === 'done')
+  const allDone = isDone;
 
   return (
     <div className="glass-card" style={{ overflow: 'hidden', animation: 'slideInLeft 0.4s ease 0.1s both' }}>
