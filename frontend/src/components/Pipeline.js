@@ -7,13 +7,11 @@ const STEPS = [
   { id: 'report',  code: '04', label: 'REPORT GENERATION',  sub: 'Compiling accuracy report',              icon: '◆' },
 ];
 
-export default function Pipeline({ currentStep, claimCount, verifiedCount, isDone, isAIDetect }) {
+export default function Pipeline({ currentStep, claimCount, verifiedCount, isDone, isAIDetect, isImage }) {
   const currentIdx = STEPS.findIndex(s => s.id === currentStep);
 
-  // allDone: explicit prop OR naturally completed
-  const allDone = isDone ||
-    currentStep === 'report' ||
-    (claimCount > 0 && verifiedCount >= claimCount && currentStep === 'verify');
+  // allDone: explicit prop from parent (usually phase === 'done')
+  const allDone = isDone;
 
   return (
     <div className="glass-card" style={{ overflow: 'hidden', animation: 'slideInLeft 0.4s ease 0.1s both' }}>
@@ -49,9 +47,10 @@ export default function Pipeline({ currentStep, claimCount, verifiedCount, isDon
 
       <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {STEPS.map((step, i) => {
-          const isSkippedStep = isAIDetect && (step.id === 'extract' || step.id === 'search');
-          const done = !isSkippedStep && (allDone || (currentIdx > i));
-          const active = !isSkippedStep && !allDone && i === currentIdx;
+          const isSkippedStep = isAIDetect && !isImage && (step.id === 'extract' || step.id === 'search');
+          
+          const done = (allDone || (currentIdx > i));
+          const active = !allDone && i === currentIdx;
 
           return (
             <div key={step.id}>
@@ -99,7 +98,19 @@ export default function Pipeline({ currentStep, claimCount, verifiedCount, isDon
                     color: done ? 'var(--green)' : active ? 'var(--a1)' : isSkippedStep ? 'var(--muted)' : 'var(--dim)',
                     fontWeight: active ? '500' : '400',
                     transition: 'color 0.3s',
-                  }}>{step.label}</div>
+                  }}>
+                    {isAIDetect ? (
+                      isImage ? (
+                        step.id === 'extract' ? 'AI GENERATION CHECK' :
+                        step.id === 'search' ? 'DEEPFAKE SCAN' :
+                        step.id === 'verify' ? 'SOURCE AUTHENTICITY' :
+                        step.label
+                      ) : (
+                        step.id === 'verify' ? 'AI CONTENT ANALYSIS' :
+                        step.label
+                      )
+                    ) : step.label}
+                  </div>
                   <div style={{
                     fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)',
                     marginTop: '3px', letterSpacing: '0.5px',
@@ -108,7 +119,17 @@ export default function Pipeline({ currentStep, claimCount, verifiedCount, isDon
                       ? claimCount > 0
                         ? `verifying claim ${Math.min(verifiedCount + 1, claimCount)} of ${claimCount}`
                         : `verifying... ${verifiedCount > 0 ? `(${verifiedCount} done)` : ''}`
-                      : isSkippedStep ? 'Not applicable for AI detection' : step.sub}
+                      : isAIDetect ? (
+                        isImage ? (
+                          step.id === 'extract' ? 'Checking for synthetic generation' :
+                          step.id === 'search' ? 'Scanning for deepfake manipulation' :
+                          step.id === 'verify' ? 'Final verification' :
+                          step.sub
+                        ) : (
+                          step.id === 'verify' ? 'Analyzing linguistic patterns' :
+                          step.sub
+                        )
+                      ) : step.sub}
                   </div>
                 </div>
 

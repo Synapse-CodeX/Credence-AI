@@ -80,6 +80,20 @@ class MediaDetectionResult(BaseModel):
     verdict: str
     confidence: str
 
+class DeepfakeDetectionResult(BaseModel):
+    image_url: str
+    deepfake_score: float = Field(ge=0, le=1)
+    verdict: str
+    confidence: str
+
+class ImagePipelineResult(BaseModel):
+    image_url: str
+    ai_result: MediaDetectionResult | None = None
+    deepfake_result: DeepfakeDetectionResult | None = None
+    final_verdict: str
+    pipeline_stage: str  # "genai", "deepfake", or "human"
+    confidence: str
+
 
 class MediaDetectionRequest(BaseModel):
     image_url: str

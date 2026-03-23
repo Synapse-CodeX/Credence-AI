@@ -113,7 +113,7 @@ export async function checkAIImage(file) {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`${BACKEND_URL}/api/detect-media/image-upload`, {
+  const response = await fetch(`${BACKEND_URL}/api/detect-media/image-pipeline`, {
     method: 'POST',
     body: formData,
   });
@@ -123,14 +123,28 @@ export async function checkAIImage(file) {
   }
   const data = await response.json();
 
+  // Map the new ImagePipelineResult into our frontend format
   return {
     aiDetection: {
-      aiScore: Math.round(data.ai_generated_score * 100),
-      humanScore: Math.round((1 - data.ai_generated_score) * 100),
-      verdict: data.verdict === 'Likely AI-Generated' ? 'LIKELY AI' :
-               data.verdict === 'Likely Real' ? 'LIKELY HUMAN' : 'MIXED',
-      signals: ['Visual artifacts checked', 'GenAI signature analysis via SightEngine'],
+      aiScore: Math.round((data.ai_result?.ai_generated_score || 0) * 100),
+      humanScore: Math.round((1 - (data.ai_result?.ai_generated_score || 0)) * 100),
+      verdict: data.ai_result?.verdict || 'UNKNOWN',
     },
+    deepfake: data.deepfake_result ? {
+      score: Math.round(data.deepfake_result.deepfake_score * 100),
+      verdict: data.deepfake_result.verdict,
+      confidence: data.deepfake_result.confidence
+    } : null,
+    pipeline: {
+      stage: data.pipeline_stage,
+      finalVerdict: data.final_verdict,
+      confidence: data.confidence
+    },
+    signals: [
+      'Visual artifacts checked',
+      'GenAI signature analysis via SightEngine',
+      data.pipeline_stage === 'deepfake' ? 'Deepfake manipulation scan performed' : 'Standard GenAI scan'
+    ],
     bias: null
   };
 }
