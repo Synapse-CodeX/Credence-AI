@@ -18,8 +18,9 @@ RUN uv venv /opt/venv && \
 FROM python:3.11-slim AS runtime
 
 # Install curl for healthcheck
+# Install curl and ffmpeg/ffprobe
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
+    apt-get install -y --no-install-recommends curl ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -36,11 +37,14 @@ ENV PYTHONUNBUFFERED=1
 # Copy backend application code
 COPY backend/ .
 
+# Create uploads and frames directories
+RUN mkdir -p /app/uploads /app/frames
+
 # Copy the agent/ directory (sibling of backend/, imported by graph.py)
 COPY agent/ /agent
 
 # Set ownership
-RUN chown -R appuser:appuser /app /agent
+RUN chown -R appuser:appuser /app /agent /app/uploads /app/frames
 
 USER appuser
 

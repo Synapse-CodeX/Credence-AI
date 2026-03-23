@@ -22,6 +22,9 @@ export default function InputPanel({ onAnalyze, loading }) {
   const recognitionRef = useRef(null);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const [error, setError] = useState(null);
 
   const startVoice = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -60,12 +63,31 @@ export default function InputPanel({ onAnalyze, loading }) {
   const readFile = (file) => {
     if (!file) return;
 
-    if (mode === 'aidetect' && file.type.startsWith('image/')) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-      setText('');
-      setFileName(file.name);
-      return;
+    if (mode === 'aidetect') {
+      if (file.size > 50 * 1024 * 1024) {
+        setError('File size exceeds 50MB limit');
+        return;
+      }
+      setError(null);
+
+      if (file.type.startsWith('image/')) {
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+        setVideoFile(null);
+        setVideoPreview(null);
+        setText('');
+        setFileName(file.name);
+        return;
+      }
+      if (file.type.startsWith('video/')) {
+        setVideoFile(file);
+        setVideoPreview(URL.createObjectURL(file));
+        setImageFile(null);
+        setImagePreview(null);
+        setText('');
+        setFileName(file.name);
+        return;
+      }
     }
 
     const allowed = ['text/plain', 'application/pdf', 'text/html',
@@ -101,6 +123,10 @@ export default function InputPanel({ onAnalyze, loading }) {
       onAnalyze({ mode, imageFile });
       return;
     }
+    if (mode === 'aidetect' && videoFile) {
+      onAnalyze({ mode, videoFile });
+      return;
+    }
     if (text.trim().length > 10) onAnalyze({ mode, content: text });
   };
 
@@ -110,10 +136,13 @@ export default function InputPanel({ onAnalyze, loading }) {
     setFileName(null);
     setImageFile(null);
     setImagePreview(null);
+    setVideoFile(null);
+    setVideoPreview(null);
+    setError(null);
   };
 
   const wc = text.trim().split(/\s+/).filter(Boolean).length;
-  const canGo = !loading && ((text.trim().length > 10) || (mode === 'aidetect' && !!imageFile));
+  const canGo = !loading && ((text.trim().length > 10) || (mode === 'aidetect' && (!!imageFile || !!videoFile)));
   const accentColor = mode === 'factcheck' ? 'var(--a1)' : 'var(--cyan)';
   const accentGlow = mode === 'factcheck' ? 'var(--a1-glow)' : 'rgba(0,212,255,0.25)';
 
@@ -180,7 +209,12 @@ export default function InputPanel({ onAnalyze, loading }) {
               }}>
                 <span>📄</span>{fileName}
                 <span
-                  onClick={() => { setText(''); setFileName(null); setImageFile(null); setImagePreview(null); }}
+                  onClick={() => { 
+                    setText(''); setFileName(null); 
+                    setImageFile(null); setImagePreview(null); 
+                    setVideoFile(null); setVideoPreview(null);
+                    setError(null);
+                  }}
                   style={{ cursor: 'pointer', opacity: 0.6, marginLeft: '2px' }}
                 >✕</span>
               </div>
@@ -202,9 +236,13 @@ export default function InputPanel({ onAnalyze, loading }) {
 
         {/* textarea with line numbers OR image preview */}
         <div style={{ display: 'flex' }}>
-          {mode === 'aidetect' && imagePreview ? (
-            <div style={{ flex: 1, padding: '16px', display: 'flex', justifyContent: 'center', background: 'var(--bg0)', minHeight: '230px' }}>
-              <img src={imagePreview} alt="upload preview" style={{ maxHeight: '200px', objectFit: 'contain', borderRadius: 'var(--radius)' }} />
+          {mode === 'aidetect' && (imagePreview || videoPreview) ? (
+            <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'var(--bg0)', minHeight: '230px' }}>
+              {imagePreview ? (
+                <img src={imagePreview} alt="upload preview" style={{ maxHeight: '200px', objectFit: 'contain', borderRadius: 'var(--radius)' }} />
+              ) : (
+                <video src={videoPreview} controls style={{ maxHeight: '200px', maxWidth: '100%', borderRadius: 'var(--radius)' }} />
+              )}
             </div>
           ) : (
             <>
@@ -248,9 +286,11 @@ export default function InputPanel({ onAnalyze, loading }) {
           <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--dim)', letterSpacing: '1px' }}>
             {dragOver
               ? '↓ DROP FILE TO LOAD'
-              : canGo
-                ? `▶ READY — ${mode === 'factcheck' ? 'WILL EXTRACT & VERIFY CLAIMS' : 'WILL DETECT AI AUTHORSHIP'}`
-                : '// minimum 10 characters required'}
+              : error
+                ? `⚠ ${error}`
+                : canGo
+                  ? `▶ READY — ${mode === 'factcheck' ? 'WILL EXTRACT & VERIFY CLAIMS' : 'WILL DETECT AI AUTHORSHIP'}`
+                  : '// minimum 10 characters required'}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -258,7 +298,7 @@ export default function InputPanel({ onAnalyze, loading }) {
             <input
               ref={fileInputRef}
               type="file"
-              accept={mode === 'aidetect' ? "image/*,.txt,.md,.html,.csv,.js,.py,.json,.xml,.log" : ".txt,.md,.html,.csv,.js,.py,.json,.xml,.log"}
+              accept={mode === 'aidetect' ? "image/*,video/*,.txt,.md,.html,.csv,.js,.py,.json,.xml,.log" : ".txt,.md,.html,.csv,.js,.py,.json,.xml,.log"}
               onChange={handleFileChange}
               style={{ display: 'none' }}
             />

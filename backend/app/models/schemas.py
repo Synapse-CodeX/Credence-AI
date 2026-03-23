@@ -95,6 +95,14 @@ class ImagePipelineResult(BaseModel):
     confidence: str
 
 
+class VideoDetectionResult(BaseModel):
+    filename: str
+    frame_results: list[ImagePipelineResult]
+    final_conclusion: str
+    flagged_count: int
+    is_short_circuited: bool
+
+
 class MediaDetectionRequest(BaseModel):
     image_url: str
 

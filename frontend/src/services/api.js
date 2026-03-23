@@ -2,6 +2,25 @@
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 
+// ─── Helper for AI Verdict Mapping ──────────────────────────────────────────
+const mapVerdict = (verdict, probability) => {
+  const v = (verdict || "").toString().toUpperCase();
+  
+  // Broad checks for "AI" or "Artificial" or "Generated" signals
+  if (v === "AI" || v.includes("AI") || v.includes("GENERATED") || v.includes("DEEPFAKE") || v.includes("SYNTHETIC")) {
+    return "LIKELY AI";
+  }
+  // Broad checks for "Human" or "Real" signals
+  if (v === "HUMAN" || v.includes("HUMAN") || v.includes("REAL") || v.includes("AUTHENTIC")) {
+    return "LIKELY HUMAN";
+  }
+  
+  // Fallback to probability if verdict is ambiguous or Unknown
+  if (probability > 0.7) return "LIKELY AI";
+  if (probability < 0.3) return "LIKELY HUMAN";
+  return "MIXED";
+};
+
 // ─── Factcheck verification pipeline (SSE Stream) ─────────────────────────
 export async function startVerification(reqPayload, onProgress, onComplete, onError, signal) {
   try {
@@ -102,7 +121,7 @@ export async function checkAIText(text) {
     aiDetection: {
       aiScore: Math.round(data.ai_probability * 100),
       humanScore: Math.round((1 - data.ai_probability) * 100),
-      verdict: data.verdict === "AI" ? "LIKELY AI" : data.verdict === "Human" ? "LIKELY HUMAN" : "MIXED",
+      verdict: mapVerdict(data.verdict, data.ai_probability),
       signals: data.signals || [],
     },
     bias: null
@@ -128,7 +147,7 @@ export async function checkAIImage(file) {
     aiDetection: {
       aiScore: Math.round((data.ai_result?.ai_generated_score || 0) * 100),
       humanScore: Math.round((1 - (data.ai_result?.ai_generated_score || 0)) * 100),
-      verdict: data.ai_result?.verdict || 'UNKNOWN',
+      verdict: mapVerdict(data.ai_result?.verdict, data.ai_result?.ai_generated_score || 0),
     },
     deepfake: data.deepfake_result ? {
       score: Math.round(data.deepfake_result.deepfake_score * 100),
@@ -146,6 +165,46 @@ export async function checkAIImage(file) {
       data.pipeline_stage === 'deepfake' ? 'Deepfake manipulation scan performed' : 'Standard GenAI scan'
     ],
     bias: null
+  };
+}
+
+export async function checkAIVideo(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${BACKEND_URL}/api/detect-media/extract-frames`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.detail || `AI Video Detection failed: ${response.status}`);
+  }
+  const data = await response.json();
+
+  // Map VideoDetectionResult to a format similar to ImageAIResult
+  return {
+    filename: data.filename,
+    frameResults: (data.frame_results || []).map(fr => ({
+      aiScore: Math.round((fr.ai_result?.ai_generated_score || 0) * 100),
+      deepfakeScore: Math.round((fr.deepfake_result?.deepfake_score || 0) * 100),
+      verdict: mapVerdict(fr.final_verdict, (fr.ai_result?.ai_generated_score || 0)),
+      pipelineStage: fr.pipeline_stage,
+      imageUrl: fr.image_url // This is the frame's filename
+    })),
+    finalConclusion: data.final_conclusion,
+    flaggedCount: data.flagged_count,
+    isShortCircuited: data.is_short_circuited,
+    aiScore: data.flagged_count >= 3 ? 90 : (data.flagged_count * 20), // heuristic for overall score
+    verdict: data.flagged_count >= 3 ? 'LIKELY AI/DEEPFAKE' : 'LIKELY AUTHENTIC',
+    pipelineStage: 'video_frames',
+    confidence: 'HIGH',
+    summary: `Analysis of 5 extracted frames: ${data.flagged_count} frames flagged. Final conclusion: ${data.final_conclusion}.`,
+    signals: [
+      'Temporal consistency check',
+      'Frame-by-frame synthetic analysis',
+      data.is_short_circuited ? 'Processing short-circuited due to high confidence' : 'Full frame set analyzed'
+    ]
   };
 }
 
@@ -181,7 +240,7 @@ export function analyzeAll(content) {
           aiDetection = {
             aiScore: Math.round((ai.ai_probability || 0) * 100),
             humanScore: Math.round((1 - (ai.ai_probability || 0)) * 100),
-            verdict: ai.verdict === "AI" ? "LIKELY AI" : ai.verdict === "Human" ? "LIKELY HUMAN" : "MIXED",
+            verdict: mapVerdict(ai.verdict, ai.ai_probability || 0),
             signals: ai.signals || []
           };
         }

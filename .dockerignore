@@ -1,0 +1,18 @@
+# Root .dockerignore — used when building backend from project root context
+.git
+.venv
+.env
+.env.*
+__pycache__
+*.pyc
+node_modules
+frontend/node_modules
+frontend/build
+.agents
+.agent
+.claude
+.windsurf
+.insforge
+*.md
+!backend/**
+!agent/**
