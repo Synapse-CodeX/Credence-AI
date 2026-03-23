@@ -539,10 +539,9 @@ export default function App() {
 
               {/* ✅ FIX: pass pipelineStep directly + isDone prop */}
               <Pipeline
-                currentStep={pipelineStep}
+                currentStep={phase === 'done' ? 'report' : pipelineStep}
                 claimCount={claims.length}
                 verifiedCount={verifiedCount}
-                isDone={phase === 'done'}
               />
 
               {analysisMode === 'factcheck' && claims.length > 0 && (

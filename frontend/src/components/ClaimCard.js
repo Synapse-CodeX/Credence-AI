@@ -12,7 +12,6 @@ function ConfBar({ value, color }) {
   );
 }
 
-// Typewriter effect for explanation
 function Typewriter({ text, speed = 18 }) {
   const [displayed, setDisplayed] = useState('');
   useEffect(() => {
@@ -38,6 +37,31 @@ const difficultyConfig = {
   'HARD':   { color: 'var(--red)',    label: 'HARD'   },
 };
 
+// Render a source string — wraps in <a> if it looks like a URL
+function SourceLink({ s }) {
+  const isUrl = /^https?:\/\//.test(s);
+  if (!isUrl) return <span>{s}</span>;
+  return (
+    <a
+      href={s}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        color: 'var(--cyan)',
+        textDecoration: 'underline',
+        textDecorationColor: 'rgba(0,212,255,0.35)',
+        textUnderlineOffset: '2px',
+        transition: 'color 0.15s',
+        wordBreak: 'break-all',
+      }}
+      onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+      onMouseLeave={e => e.currentTarget.style.color = 'var(--cyan)'}
+    >
+      {s}
+    </a>
+  );
+}
+
 export default function ClaimCard({ claim, result, index, loading }) {
   const [open, setOpen] = useState(false);
   const color = result ? (verdictColor[result.verdict] || 'var(--muted)') : 'var(--line2)';
@@ -53,12 +77,10 @@ export default function ClaimCard({ claim, result, index, loading }) {
     }}>
       {/* Claim row */}
       <div onClick={() => result && setOpen(!open)} style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', padding: '14px 16px', cursor: result ? 'pointer' : 'default' }}>
-        {/* index */}
         <div style={{ width: '26px', height: '26px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--line2)', borderRadius: 'var(--radius)', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--dim)', background: 'var(--bg2)', marginTop: '1px' }}>
           {String(index + 1).padStart(2, '0')}
         </div>
 
-        {/* text */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '13px', color: 'var(--text)', lineHeight: '1.65' }}>{claim.claim}</div>
           {claim.context && (
@@ -66,7 +88,6 @@ export default function ClaimCard({ claim, result, index, loading }) {
               — "{claim.context}"
             </div>
           )}
-          {/* badges row */}
           <div style={{ display: 'flex', gap: '6px', marginTop: '7px', flexWrap: 'wrap' }}>
             {result?.timeSensitive && (
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', background: 'rgba(255,184,48,0.1)', border: '1px solid rgba(255,184,48,0.3)', borderRadius: 'var(--radius)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--orange)', letterSpacing: '1px' }}>
@@ -81,7 +102,6 @@ export default function ClaimCard({ claim, result, index, loading }) {
           </div>
         </div>
 
-        {/* right side */}
         <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
           {loading && !result && (
             <div style={{ width: '16px', height: '16px', borderRadius: '50%', border: '2px solid var(--a1)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
@@ -100,7 +120,7 @@ export default function ClaimCard({ claim, result, index, loading }) {
             <ConfBar value={result.confidence} color={color} />
           </div>
 
-          {/* explanation with typewriter */}
+          {/* explanation */}
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>
             <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px', marginBottom: '8px' }}>ANALYSIS</div>
             <div style={{ fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--muted)', lineHeight: '1.7', padding: '10px 12px', background: 'var(--bg1)', border: '1px solid var(--line)', borderRadius: 'var(--radius)' }}>
@@ -113,14 +133,19 @@ export default function ClaimCard({ claim, result, index, loading }) {
             )}
           </div>
 
-          {/* sources */}
+          {/* sources — clickable if URL */}
           {result.sources?.length > 0 && (
             <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px', marginBottom: '8px' }}>CITED SOURCES</div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px', marginBottom: '8px' }}>
+                CITED SOURCES ({result.sources.length})
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 {result.sources.map((s, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--cyan)', padding: '6px 10px', background: 'var(--cyan-dim)', border: '1px solid rgba(0,212,255,0.15)', borderRadius: 'var(--radius)' }}>
-                    <span style={{ color: 'var(--dim)', flexShrink: 0 }}>#{String(i + 1).padStart(2, '0')}</span>{s}
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--cyan)', padding: '6px 10px', background: 'var(--cyan-dim)', border: '1px solid rgba(0,212,255,0.15)', borderRadius: 'var(--radius)', wordBreak: 'break-all', transition: 'border-color 0.2s' }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(0,212,255,0.4)'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(0,212,255,0.15)'}>
+                    <span style={{ color: 'var(--dim)', flexShrink: 0 }}>#{String(i + 1).padStart(2, '0')}</span>
+                    <SourceLink s={s} />
                   </div>
                 ))}
               </div>

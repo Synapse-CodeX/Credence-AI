@@ -68,7 +68,7 @@ export default function Footer() {
             color:'var(--a1)', letterSpacing:'1.5px',
           }}>
             <span style={{fontSize:'14px'}}>✦</span>
-            GOOGLE GEMINI
+            <span>OpenAI GPT 4.0</span>
           </div>
           <div style={{
             fontFamily:'var(--mono)', fontSize:'9px',

@@ -74,7 +74,7 @@ export default function Header({ onBackToLanding, onLive }) {
             {time.toLocaleTimeString('en-US', { hour12: false })} UTC
           </div>
           <div style={{ padding: '4px 12px', border: '1px solid var(--a1)', color: 'var(--a1)', letterSpacing: '1px', boxShadow: '0 0 8px var(--a1-dim)' }}>
-            GEMINI 2.0
+           OPENAI GPT 4.0
           </div>
           {/* Live Fact-Check button */}
           {isSignedIn && onLive && (
