@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import Annotated
 
 from fastapi import APIRouter, Body, UploadFile, File
@@ -111,6 +112,15 @@ async def extract_frames_endpoint(
             is_short_circuited=short_circuited
         )
     finally:
-        # Optional: Cleanup video_path? 
-        # For now, we'll keep it as per the existing pattern in extract_frames.py
-        pass
+        # 5. Cleanup: Delete uploaded video and extracted frames
+        try:
+            if os.path.exists(video_path):
+                os.remove(video_path)
+            
+            prefix = os.path.splitext(file.filename)[0]
+            prefix_output_dir = os.path.join("frames", prefix)
+            if os.path.isdir(prefix_output_dir):
+                shutil.rmtree(prefix_output_dir)
+        except Exception as e:
+            # Log cleanup error but don't fail the request
+            pass
