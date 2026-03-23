@@ -13,9 +13,32 @@ def search_evidence(state: AgentState) -> dict:
     # -----------------------------
     # DOMAIN FILTERS
     # -----------------------------
-    bad_domains = ["facebook", "instagram", "reddit", "yelp", "example", "twitter", "tiktok", "quora", "medium", "youtube", "pinterest", "tumblr", "vk", "weibo", "dailymotion", "flickr", "livejournal", "myspace","westeamahead"]
+    bad_domains = [
+        "facebook", "instagram", "reddit", "yelp", "example",
+        "twitter", "tiktok", "quora", "medium", "youtube",
+        "pinterest", "tumblr", "vk", "weibo", "dailymotion",
+        "flickr", "livejournal", "myspace", "westeamahead"
+    ]
 
-    trusted_domains = ["bbc", "reuters", "who", "un", "gov", "nature", "apnews", "npr", "wikipedia", "sciencedaily", "nih", "cdc", "nature", "sciencealert","nasa", "arxiv", "ssrn", "jstor", "springer", "elsevier", "tandfonline", "nature", "sciencemag", "plos", "frontiersin", "biorxiv","nationalgeographic"]
+    trusted_domains = [
+        "bbc", "reuters", "who", "un", "gov", "nature",
+        "apnews", "npr", "wikipedia", "sciencedaily",
+        "nih", "cdc", "sciencealert", "nasa", "arxiv",
+        "ssrn", "jstor", "springer", "elsevier",
+        "tandfonline", "sciencemag", "plos",
+        "frontiersin", "biorxiv", "nationalgeographic"
+    ]
+
+    stopwords = {
+        "is", "are", "was", "were", "the", "a", "an",
+        "in", "on", "at", "of", "for", "to", "and",
+        "does", "do", "did", "can", "could", "should",
+        "has", "have", "had"
+    }
+
+    def extract_keywords(text: str):
+        words = text.lower().split()
+        return [w for w in words if w not in stopwords and len(w) > 2][:6]
 
     for claim_obj in state.claims:
         claim_text = claim_obj.claim
@@ -25,28 +48,31 @@ def search_evidence(state: AgentState) -> dict:
         if confidence < 0.5:
             continue
 
+        keywords = extract_keywords(claim_text)
+        base_query = " ".join(keywords)
+
         # -----------------------------
-        # QUERY STRATEGY
+        # QUERY STRATEGY (IMPROVED)
         # -----------------------------
         if claim_type == "numerical":
             queries = [
-                f"{claim_text} statistics",
-                f"{claim_text} official data",
+                f"{base_query} statistics data",
+                f"{base_query} official report",
             ]
         elif claim_type == "temporal":
             queries = [
-                f"{claim_text} timeline",
-                f"{claim_text} date",
+                f"{base_query} timeline history",
+                f"{base_query} date event",
             ]
         elif claim_type == "entity":
             queries = [
-                f"{claim_text} who is",
-                f"{claim_text} details",
+                f"{base_query} who is",
+                f"{base_query} details information",
             ]
         else:
             queries = [
-                claim_text,
-                f"{claim_text} facts",
+                base_query,
+                f"{base_query} facts explanation",
             ]
 
         # -----------------------------
@@ -56,13 +82,12 @@ def search_evidence(state: AgentState) -> dict:
 
         for q in queries:
             try:
-                res = search_client.search(query=q, max_results=3)
+                res = search_client.search(query=q, max_results=4)
                 results = res.get("results", [])
 
                 for r in results:
                     url = r.get("url", "")
 
-                    # ❌ FILTER BAD SOURCES
                     if any(b in url for b in bad_domains):
                         continue
 
@@ -85,7 +110,23 @@ def search_evidence(state: AgentState) -> dict:
                 unique_results.append(r)
 
         # -----------------------------
-        # RANKING (IMPROVED)
+        # 🔥 RELEVANCE FILTER (NEW)
+        # -----------------------------
+        def is_relevant(r):
+            content = (r.get("content") or "").lower()
+            title = (r.get("title") or "").lower()
+
+            match = sum(1 for k in keywords if k in content or k in title)
+
+            return match >= max(2, len(keywords) // 2)
+
+        filtered_results = [r for r in unique_results if is_relevant(r)]
+
+        if len(filtered_results) < 2:
+            filtered_results = unique_results  # fallback
+
+        # -----------------------------
+        # 🔥 RANKING (UPGRADED)
         # -----------------------------
         def score_result(r):
             score = 0
@@ -93,19 +134,20 @@ def search_evidence(state: AgentState) -> dict:
             title = (r.get("title") or "").lower()
             url = r.get("url") or ""
 
-            # keyword match
-            if any(word in content for word in claim_text.lower().split()):
-                score += 1
-            if any(word in title for word in claim_text.lower().split()):
-                score += 1
+            # strong keyword overlap
+            score += sum(2 for k in keywords if k in content)
 
-            # trusted domain boost
-            if any(t in url for t in trusted_domains):
+            # title importance
+            if any(k in title for k in keywords):
                 score += 3
+
+            # trusted boost
+            if any(t in url for t in trusted_domains):
+                score += 4
 
             return score
 
-        ranked = sorted(unique_results, key=score_result, reverse=True)
+        ranked = sorted(filtered_results, key=score_result, reverse=True)
 
         # -----------------------------
         # CONVERT TO PYDANTIC
@@ -123,5 +165,4 @@ def search_evidence(state: AgentState) -> dict:
         ]
 
     print("Evidence collected.")
-
     return {"evidence": evidence}

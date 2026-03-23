@@ -2,36 +2,65 @@ from langchain_openai import ChatOpenAI
 from agent_state import AgentState, VerificationResult
 from dotenv import load_dotenv
 import os
+import re
 
 load_dotenv()
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
 
+
 def verify_claims(state: AgentState) -> dict:
     print("\n[Agent 3] Verifying claims...")
 
     verifications: dict[int, VerificationResult] = {}
-
     structured_llm = llm.with_structured_output(VerificationResult)
+
+    # -----------------------------
+    # 🔥 HELPER FUNCTIONS
+    # -----------------------------
+    def is_absolute_claim(text: str) -> bool:
+        keywords = ["exactly", "always", "never", "all", "must", "only"]
+        return any(k in text.lower() for k in keywords)
+
+    def has_range_in_evidence(sources) -> bool:
+        text = " ".join((s.content or "").lower() for s in sources)
+
+        approx_words = [
+            "about", "approximately", "around",
+            "roughly", "varies", "range", "between"
+        ]
+
+        # keyword-based detection
+        if any(word in text for word in approx_words):
+            return True
+
+        # 🔥 numeric range detection (e.g. 4-6, 4 to 6)
+        if re.search(r"\d+\s*(to|-)\s*\d+", text):
+            return True
+
+        return False
 
     for claim in state.claims:
         sources = state.evidence.get(claim.id, [])
 
         # -----------------------------
-        # BUILD CONTEXT
+        # BUILD CONTEXT (CLEAN)
         # -----------------------------
         context = "\n".join(
-            f"- {s.title}: {s.content}"
-            for s in sources
+            f"- Title: {s.title}\n  Content: {s.content}"
+            for s in sources[:5]
         )
 
+        absolute_flag = is_absolute_claim(claim.claim)
+        range_flag = has_range_in_evidence(sources)
+
         # -----------------------------
-        # PROMPT (UPDATED)
+        # 🔥 IMPROVED PROMPT
         # -----------------------------
         prompt = f"""
-You are an expert fact-checking system.
+You are a strict fact-checking system.
 
-Your task is to verify the claim strictly using ONLY the provided evidence.
+Verify the claim ONLY using the provided evidence.
 
 ---------------------
 Claim:
@@ -41,44 +70,46 @@ Evidence:
 {context}
 ---------------------
 
-Instructions:
-- Do NOT use prior knowledge or assumptions
-- Base your decision ONLY on the given evidence
-- If evidence is missing, weak, or irrelevant → return "Unverifiable"
+RULES:
 
-Judgment Rules:
-- TRUE → Claim is clearly supported by strong and consistent evidence
-- FALSE → Claim is clearly contradicted by strong evidence
-- PARTIALLY TRUE → Claim contains both correct and incorrect/misleading elements
-- UNVERIFIABLE → Not enough reliable evidence
+1. Precision matters:
+- "exactly", "always", "never", "all" → must be strictly true
+- If evidence shows approximation or variation → FALSE
 
-Important Guidelines:
-- A claim that is generally true (even with rare exceptions) → classify as TRUE
-- Do NOT mark something as "Partially True" just because of minor edge cases
-- Prefer high-quality and consistent evidence over isolated statements
-- Ignore unreliable or weak sources if stronger evidence exists
+2. Do NOT generalize:
+- "about" ≠ "exactly"
+- "often" ≠ "always"
 
-Evidence Handling:
-- Identify supporting evidence only
-- Do NOT include conflicting sources unless there is a clear contradiction
+3. Contradictions:
+- If any strong contradiction → FALSE
 
-Confidence:
-- High (0.9–1.0) → strong agreement across multiple reliable sources
-- Medium (0.6–0.89) → moderate or slightly mixed evidence
-- Low (0.0–0.59) → weak, limited, or unclear evidence
+4. Unverifiable:
+- If no strong support → UNVERIFIABLE
 
-Return your answer strictly in the required structured format.
+5. Partial:
+- Only if clearly mixed truth
+
+Return structured output only.
 """
 
         try:
             result: VerificationResult = structured_llm.invoke(prompt)
 
             # -----------------------------
-            # SOURCE SELECTION (CLEAN)
+            # 🔥 HARD OVERRIDE (CRITICAL FIX)
+            # -----------------------------
+            if absolute_flag and range_flag:
+                result.verdict = "FALSE"
+                result.reason = (
+                    "Claim uses absolute wording but evidence shows approximation or range."
+                )
+                result.confidence = 0.9
+
+            # -----------------------------
+            # SOURCE SELECTION
             # -----------------------------
             urls = [s.url for s in sources]
 
-            # remove duplicate domains
             seen_domains = set()
             filtered_urls = []
 
@@ -93,19 +124,13 @@ Return your answer strictly in the required structured format.
                     filtered_urls.append(url)
 
             result.supporting_sources = filtered_urls[:3]
-
-            # -----------------------------
-            # REMOVE CONFLICTING SOURCES
-            # -----------------------------
             result.conflicting_sources = []
 
             # -----------------------------
-            # CONFIDENCE CONTROL (IMPORTANT)
+            # CONFIDENCE CONTROL
             # -----------------------------
-            # cap unrealistic 1.0 values
             result.confidence = min(result.confidence, 0.95)
 
-            # adjust based on evidence strength
             if len(sources) < 3:
                 result.confidence = max(result.confidence - 0.05, 0.5)
 
@@ -124,5 +149,4 @@ Return your answer strictly in the required structured format.
             )
 
     print("Verifications completed.")
-
     return {"verifications": verifications}
