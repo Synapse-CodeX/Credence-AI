@@ -7,11 +7,12 @@ from app.models.schemas import (
     MediaDetectionRequest,
     MediaDetectionResponse,
     MediaDetectionResult,
+    ImagePipelineResult,
 )
 from app.services.ai_media_detector import (
-    detect_ai_image,
     detect_ai_images_batch,
     detect_ai_image_upload,
+    detect_image_pipeline,
 )
 
 router = APIRouter(prefix="/api/detect-media", tags=["AI Media Detection"])
@@ -41,3 +42,12 @@ async def check_uploaded_image(
     """Check a single uploaded image for AI generation."""
     file_bytes = await file.read()
     return await detect_ai_image_upload(file_bytes, file.filename or "uploaded.jpg")
+
+
+@router.post("/image-pipeline")
+async def check_image_pipeline(
+    file: UploadFile = File(...),
+) -> ImagePipelineResult:
+    """Check a single uploaded image using the sequential AI -> Deepfake pipeline."""
+    file_bytes = await file.read()
+    return await detect_image_pipeline(file_bytes, file.filename or "uploaded.jpg")

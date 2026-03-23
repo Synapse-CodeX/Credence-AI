@@ -137,10 +137,12 @@ function AIDetectionResult({ result }) {
 
 function ImageAIResult({ result, previewUrl }) {
   if (!result) return null;
-  const isAI = result.verdict?.includes('AI');
-  const isReal = result.verdict?.includes('REAL');
-  const color = isAI ? 'var(--red)' : isReal ? 'var(--green)' : 'var(--orange)';
-  const bg = isAI ? 'var(--red-dim)' : isReal ? 'var(--green-dim)' : 'var(--orange-dim)';
+  const isAI = result.pipelineStage === 'genai';
+  const isDeepfake = result.pipelineStage === 'deepfake';
+  const isReal = result.pipelineStage === 'human';
+  
+  const color = isAI ? 'var(--red)' : isDeepfake ? 'var(--orange)' : isReal ? 'var(--green)' : 'var(--blue)';
+  const bg = isAI ? 'var(--red-dim)' : isDeepfake ? 'var(--orange-dim)' : isReal ? 'var(--green-dim)' : 'var(--blue-dim)';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', animation: 'fadeUp 0.4s ease both' }}>
@@ -152,25 +154,33 @@ function ImageAIResult({ result, previewUrl }) {
           </div>
         </div>
       )}
+      
       <div style={{ padding: '20px 24px', border: `1px solid ${color}`, borderLeft: `4px solid ${color}`, borderRadius: 'var(--radius-lg)', background: bg, display: 'flex', alignItems: 'center', gap: '20px' }}>
         <div style={{ textAlign: 'center', minWidth: '80px' }}>
-          <div style={{ fontFamily: 'var(--display)', fontSize: '48px', color, lineHeight: 1 }}>{result.aiScore}</div>
-          <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color, letterSpacing: '2px', marginTop: '2px' }}>% AI SCORE</div>
+          <div style={{ fontFamily: 'var(--display)', fontSize: '48px', color, lineHeight: 1 }}>
+            {isDeepfake ? result.deepfakeScore : result.aiScore}
+          </div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color, letterSpacing: '2px', marginTop: '2px' }}>
+            % {isDeepfake ? 'DEEPFAKE' : 'AI SCORE'}
+          </div>
         </div>
         <div style={{ width: '1px', height: '50px', background: `${color}44` }} />
         <div>
           <div style={{ fontFamily: 'var(--display)', fontSize: '22px', color, letterSpacing: '2px', marginBottom: '4px' }}>{result.verdict}</div>
-          {result.tool && result.tool !== 'UNKNOWN' && (
-            <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--muted)', letterSpacing: '1px' }}>
-              Suspected tool: <span style={{ color }}>{result.tool}</span>
-            </div>
-          )}
+          <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--muted)', letterSpacing: '1px' }}>
+            Stage: <span style={{ color }}>{result.pipelineStage.toUpperCase()} DETECTION</span>
+          </div>
         </div>
       </div>
+
+      {/* Detail Breakdown */}
       <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', background: 'var(--bg1)', overflow: 'hidden' }}>
-        <div style={{ padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>CONFIDENCE SCORES</div>
+        <div style={{ padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>DETECTION BREAKDOWN</div>
         <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {[{ label: 'AI-GENERATED', value: result.aiScore, color: 'var(--red)' }, { label: 'AUTHENTIC', value: result.humanScore, color: 'var(--green)' }].map(s => (
+          {[
+            { label: 'GEN-AI PROBABILITY', value: result.aiScore, color: 'var(--red)', active: isAI || isReal || isDeepfake },
+            { label: 'DEEPFAKE PROBABILITY', value: result.deepfakeScore || 0, color: 'var(--orange)', active: isDeepfake || isReal }
+          ].filter(s => s.active).map(s => (
             <div key={s.label}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--mono)', fontSize: '10px', color: s.color, marginBottom: '5px', letterSpacing: '1px' }}>
                 <span>{s.label}</span><span>{s.value}%</span>
@@ -182,11 +192,13 @@ function ImageAIResult({ result, previewUrl }) {
           ))}
         </div>
       </div>
+
       {result.summary && (
         <div style={{ padding: '12px 14px', background: 'var(--bg1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--muted)', lineHeight: '1.7' }}>
           {result.summary}
         </div>
       )}
+      
       {result.signals?.length > 0 && (
         <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', background: 'var(--bg1)', overflow: 'hidden' }}>
           <div style={{ padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>DETECTED SIGNALS</div>
@@ -255,16 +267,18 @@ export default function App() {
       // ── IMAGE AI DETECTION ────────────────────────────────────────────
       if (imageFile && mode === 'aidetect') {
         setPipelineStep('extract'); await sleep(400);
+        setPipelineStep('search'); await sleep(400); // Deepfake scan step
         setPipelineStep('verify');
         const imgResult = await checkAIImage(imageFile);
         const imgResultData = {
           aiScore: imgResult.aiDetection.aiScore,
+          deepfakeScore: imgResult.deepfake?.score || 0,
           humanScore: imgResult.aiDetection.humanScore,
-          verdict: imgResult.aiDetection.verdict === 'LIKELY AI' ? 'LIKELY AI GENERATED'
-            : imgResult.aiDetection.verdict === 'LIKELY HUMAN' ? 'LIKELY REAL' : 'UNCERTAIN',
+          verdict: imgResult.pipeline.finalVerdict,
+          pipelineStage: imgResult.pipeline.stage,
           tool: 'SightEngine',
-          signals: imgResult.aiDetection.signals || [],
-          summary: `AI probability: ${imgResult.aiDetection.aiScore}%. ${imgResult.aiDetection.verdict}.`,
+          signals: imgResult.signals || [],
+          summary: `Pipeline determination: ${imgResult.pipeline.finalVerdict}. Result from ${imgResult.pipeline.stage} stage. Confidence: ${imgResult.pipeline.confidence}.`,
         };
         setImageResult(imgResultData);
         setAiDetection(imgResultData);
@@ -274,7 +288,7 @@ export default function App() {
           mode: 'aidetect',
           snippet: `[IMAGE] ${imageName || 'uploaded image'}`,
           aiScore: imgResult.aiDetection.aiScore,
-          verdict: imgResult.aiDetection.verdict,
+          verdict: imgResult.pipeline.finalVerdict,
         });
         refreshHistory();
         setPhase('done');
@@ -414,9 +428,13 @@ export default function App() {
     results.forEach(r => { if (r && verdicts[r.verdict] !== undefined) verdicts[r.verdict]++; });
     const total = results.filter(Boolean).length;
     const score = total > 0 ? Math.round(((verdicts.TRUE + verdicts['PARTIALLY TRUE'] * 0.5) / total) * 100) : 0;
+    const isDF = aiDetection?.pipelineStage === 'deepfake';
+    const displayScore = isDF ? (aiDetection?.deepfakeScore || 0) : (aiDetection?.aiScore || 0);
+    const scoreLabel = isDF ? 'Deepfake' : 'AI';
+
     const shareText = analysisMode === 'factcheck'
       ? `🔍 CredenceAI Fact Check Report\n\nAccuracy Score: ${score}%\n✓ TRUE: ${verdicts.TRUE} · ◐ PARTIAL: ${verdicts['PARTIALLY TRUE']} · ✗ FALSE: ${verdicts.FALSE}\n\nVerified with real-time Tavily web search + Gemini AI\n\n#CredenceAI #FactCheck`
-      : `🤖 CredenceAI AI Detection Report\n\nAI Score: ${aiDetection?.aiScore || 0}%\nVerdict: ${aiDetection?.verdict || 'UNCERTAIN'}\n\nAnalyzed with Gemini AI\n\n#CredenceAI #AIDetection`;
+      : `🤖 CredenceAI AI Detection Report\n\n${scoreLabel} Score: ${displayScore}%\nVerdict: ${aiDetection?.verdict || 'UNCERTAIN'}\n\nAnalyzed with Gemini AI\n\n#CredenceAI #AIDetection`;
     setShowShareModal(true);
     if (navigator.share) {
       try { await navigator.share({ title: 'CredenceAI Report', text: shareText }); setShowShareModal(false); return; } catch { }
@@ -428,9 +446,13 @@ export default function App() {
     results.forEach(r => { if (r && verdicts[r.verdict] !== undefined) verdicts[r.verdict]++; });
     const total = results.filter(Boolean).length;
     const score = total > 0 ? Math.round(((verdicts.TRUE + verdicts['PARTIALLY TRUE'] * 0.5) / total) * 100) : 0;
+    const isDF = aiDetection?.pipelineStage === 'deepfake';
+    const displayScore = isDF ? (aiDetection?.deepfakeScore || 0) : (aiDetection?.aiScore || 0);
+    const scoreLabel = isDF ? 'Deepfake' : 'AI';
+
     const text = analysisMode === 'factcheck'
       ? `🔍 CredenceAI Fact Check Report\n\nAccuracy Score: ${score}%\n✓ TRUE: ${verdicts.TRUE} · ◐ PARTIAL: ${verdicts['PARTIALLY TRUE']} · ✗ FALSE: ${verdicts.FALSE}\n\nVerified with Tavily + Gemini AI\n#CredenceAI #FactCheck`
-      : `🤖 CredenceAI AI Detection\n\nAI Score: ${aiDetection?.aiScore || 0}%\nVerdict: ${aiDetection?.verdict || 'UNCERTAIN'}\n#CredenceAI #AIDetection`;
+      : `🤖 CredenceAI AI Detection\n\n${scoreLabel} Score: ${displayScore}%\nVerdict: ${aiDetection?.verdict || 'UNCERTAIN'}\n#CredenceAI #AIDetection`;
     navigator.clipboard.writeText(text).then(() => {
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 2000);
@@ -571,6 +593,7 @@ export default function App() {
                 claimCount={claims.length}
                 verifiedCount={verifiedCount}
                 isAIDetect={analysisMode === 'aidetect'}
+                isImage={!!imagePreviewUrl || !!imageResult}
               />
 
               {analysisMode === 'factcheck' && claims.length > 0 && (
@@ -664,17 +687,28 @@ export default function App() {
                     <div style={{ padding: '10px 16px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>QUICK STATS</div>
                       {(() => {
                         const v = aiDetection?.verdict || '—';
-                        const isAI = v.includes('AI');
-                        const isHuman = v.includes('HUMAN') || v.includes('REAL');
-                        const color = isAI ? 'var(--red)' : isHuman ? 'var(--green)' : 'var(--orange)';
+                        const stage = aiDetection?.pipelineStage;
+                        const isAI = stage === 'genai';
+                        const isDF = stage === 'deepfake';
+                        const isHuman = stage === 'human';
+                        
+                        const color = isAI ? 'var(--red)' : isDF ? 'var(--orange)' : isHuman ? 'var(--green)' : 'var(--blue)';
+                        
+                        const stats = [];
+                        if (isDF) {
+                          stats.push({ label: 'DEEPFAKE PROBABILITY', val: `${aiDetection?.deepfakeScore ?? 0}%`, color: 'var(--orange)' });
+                          stats.push({ label: 'AI GENERATION', val: `${aiDetection?.aiScore ?? 0}%`, color: 'var(--red)' });
+                        } else {
+                          stats.push({ label: 'AI PROBABILITY', val: `${aiDetection?.aiScore ?? 0}%`, color: 'var(--red)' });
+                          if (isHuman) stats.push({ label: 'HUMAN PROBABILITY', val: `${aiDetection?.humanScore ?? 0}%`, color: 'var(--green)' });
+                        }
+                        
+                        stats.push({ label: 'VERDICT', val: v, color: color });
+                        stats.push({ label: 'SIGNALS FOUND', val: `${aiDetection?.signals?.length || 0}`, color: 'var(--cyan)' });
+
                         return (
                           <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {[
-                              { label: 'AI PROBABILITY', val: `${aiDetection?.aiScore ?? 0}%`, color: 'var(--red)' },
-                              { label: 'HUMAN PROBABILITY', val: `${aiDetection?.humanScore ?? 0}%`, color: 'var(--green)' },
-                              { label: 'VERDICT', val: v, color: color },
-                              { label: 'SIGNALS FOUND', val: `${aiDetection?.signals?.length || 0}`, color: 'var(--cyan)' },
-                            ].map(s => (
+                            {stats.map(s => (
                               <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 'var(--radius)' }}>
                                 <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '1px' }}>{s.label}</span>
                                 <span style={{ fontFamily: 'var(--display)', fontSize: '14px', color: s.color, letterSpacing: '1px' }}>{s.val}</span>
@@ -737,9 +771,20 @@ export default function App() {
                       </>
                     ) : (
                       <>
-                        <div style={{ fontFamily: 'var(--display)', fontSize: '36px', color: 'var(--red)', letterSpacing: '2px', lineHeight: 1 }}>{aiDetection?.aiScore || 0}%</div>
-                        <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px', marginTop: '2px', marginBottom: '10px' }}>AI SCORE</div>
-                        <div style={{ padding: '3px 10px', border: '1px solid rgba(255,69,96,0.4)', borderRadius: 'var(--radius)', fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--red)', background: 'var(--red-dim)', display: 'inline-block' }}>{aiDetection?.verdict || 'UNCERTAIN'}</div>
+                        {(() => {
+                          const isDF = aiDetection?.pipelineStage === 'deepfake';
+                          const score = isDF ? (aiDetection?.deepfakeScore || 0) : (aiDetection?.aiScore || 0);
+                          const label = isDF ? 'DEEPFAKE SCORE' : 'AI SCORE';
+                          const color = isDF ? 'var(--orange)' : 'var(--red)';
+                          const bg = isDF ? 'var(--orange-dim)' : 'var(--red-dim)';
+                          return (
+                            <>
+                              <div style={{ fontFamily: 'var(--display)', fontSize: '36px', color, letterSpacing: '2px', lineHeight: 1 }}>{score}%</div>
+                              <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px', marginTop: '2px', marginBottom: '10px' }}>{label}</div>
+                              <div style={{ padding: '3px 10px', border: `1px solid ${color}44`, borderRadius: 'var(--radius)', fontFamily: 'var(--mono)', fontSize: '10px', color, background: bg, display: 'inline-block' }}>{aiDetection?.verdict || 'UNCERTAIN'}</div>
+                            </>
+                          );
+                        })()}
                       </>
                     )}
                     <div style={{ marginTop: '10px', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '1px' }}>Powered by Gemini + Tavily · CredenceAI.app</div>
