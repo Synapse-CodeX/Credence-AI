@@ -11,7 +11,7 @@ import HistoryPanel from './components/HistoryPanel';
 import ClaimHighlight from './components/ClaimHighlight';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import AuthPage from './components/AuthPage';
-import { startVerification, checkAIText, checkAIImage } from './services/api';
+import { startVerification, checkAIText, checkAIImage, checkAIVideo } from './services/api';
 import LiveFactCheck from './components/LiveFactCheck';
 import { downloadReport } from './services/downloadReport';
 import { saveAnalysis, getHistory } from './services/history';
@@ -173,7 +173,6 @@ function ImageAIResult({ result, previewUrl }) {
         </div>
       </div>
 
-      {/* Detail Breakdown */}
       <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', background: 'var(--bg1)', overflow: 'hidden' }}>
         <div style={{ padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>DETECTION BREAKDOWN</div>
         <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -215,6 +214,79 @@ function ImageAIResult({ result, previewUrl }) {
   );
 }
 
+function VideoAIResult({ result, previewUrl }) {
+  if (!result) return null;
+  const isSuspicious = result.flaggedCount >= 3;
+  const color = isSuspicious ? 'var(--red)' : 'var(--green)';
+  const bg = isSuspicious ? 'var(--red-dim)' : 'var(--green-dim)';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', animation: 'fadeUp 0.4s ease both' }}>
+      {previewUrl && (
+        <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: 'var(--bg1)' }}>
+          <div style={{ padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>ANALYZED VIDEO</div>
+          <div style={{ padding: '12px', display: 'flex', justifyContent: 'center' }}>
+            <video src={previewUrl} controls style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: 'var(--radius)', border: `1px solid ${color}44` }} />
+          </div>
+        </div>
+      )}
+
+      <div style={{ padding: '20px 24px', border: `1px solid ${color}`, borderLeft: `4px solid ${color}`, borderRadius: 'var(--radius-lg)', background: bg, display: 'flex', alignItems: 'center', gap: '20px' }}>
+        <div style={{ textAlign: 'center', minWidth: '80px' }}>
+          <div style={{ fontFamily: 'var(--display)', fontSize: '48px', color, lineHeight: 1 }}>
+            {result.flaggedCount}
+          </div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color, letterSpacing: '2px', marginTop: '2px' }}>
+             / 5 FLAGGED
+          </div>
+        </div>
+        <div style={{ width: '1px', height: '50px', background: `${color}44` }} />
+        <div>
+          <div style={{ fontFamily: 'var(--display)', fontSize: '22px', color, letterSpacing: '2px', marginBottom: '4px' }}>{result.verdict}</div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: '10px', color: 'var(--muted)', letterSpacing: '1px' }}>
+            Conclusion: <span style={{ color }}>{result.finalConclusion}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', background: 'var(--bg1)', overflow: 'hidden' }}>
+        <div style={{ padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>FRAME-BY-FRAME SCANS</div>
+        <div style={{ padding: '14px', display: 'flex', overflowX: 'auto', gap: '12px', scrollbarWidth: 'none' }}>
+           {result.frameResults.map((fr, idx) => (
+             <div key={idx} style={{ minWidth: '150px', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                 <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)' }}>FRAME {idx + 1}</span>
+                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: fr.verdict === 'AI/DEEPFAKE' ? 'var(--red)' : 'var(--green)' }} />
+               </div>
+               <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: fr.verdict === 'AI/DEEPFAKE' ? 'var(--red)' : 'var(--green)', letterSpacing: '0.5px' }}>{fr.verdict}</div>
+
+             </div>
+           ))}
+        </div>
+      </div>
+
+      {result.summary && (
+        <div style={{ padding: '12px 14px', background: 'var(--bg1)', border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--muted)', lineHeight: '1.7' }}>
+          {result.summary}
+        </div>
+      )}
+
+      {result.signals?.length > 0 && (
+        <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', background: 'var(--bg1)', overflow: 'hidden' }}>
+          <div style={{ padding: '8px 14px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>DETECTED SIGNALS</div>
+          <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {result.signals.map((s, i) => (
+              <div key={i} style={{ display: 'flex', gap: '10px', padding: '8px 12px', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--muted)' }}>
+                <span style={{ color: color, flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>{renderSignal(s)}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
   const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();
@@ -235,6 +307,8 @@ export default function App() {
   const [biasData, setBiasData] = useState(null);
   const [imageResult, setImageResult] = useState(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
+  const [videoResult, setVideoResult] = useState(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [showLive, setShowLive] = useState(false);
@@ -253,17 +327,20 @@ export default function App() {
   useEffect(() => { refreshHistory(); }, [userId, refreshHistory]);
 
   const handleAnalyze = async (data) => {
-    const { mode, content, imageName, imageFile } = data;
+    const { mode, content, imageName, imageFile, videoFile } = data;
     const abortController = new AbortController();
 
     try {
       setPhase('running'); setAnalysisMode(mode); setError(null);
       setClaims([]); setResults([]); setVerifiedCount(0);
       setAiDetection(null); setBiasData(null);
-      setImageResult(null);
+      setImageResult(null); setVideoResult(null);
       // Only clear preview if no new image is provided
       if (!imageFile) setImagePreviewUrl(null);
       else setImagePreviewUrl(URL.createObjectURL(imageFile));
+
+      if (!videoFile) setVideoPreviewUrl(null);
+      else setVideoPreviewUrl(URL.createObjectURL(videoFile));
       
       setInputText(content || '');
       setPipelineStep('extract');
@@ -293,6 +370,26 @@ export default function App() {
           snippet: `[IMAGE] ${imageName || 'uploaded image'}`,
           aiScore: imgResult.aiDetection.aiScore,
           verdict: imgResult.pipeline.finalVerdict,
+        });
+        refreshHistory();
+        return;
+      }
+
+      // ── VIDEO AI DETECTION ────────────────────────────────────────────
+      if (videoFile && mode === 'aidetect') {
+        setPipelineStep('extract'); await sleep(800); // Extraction simulation
+        setPipelineStep('search'); await sleep(1200); // Scanning simulation
+        setPipelineStep('verify');
+        const vResult = await checkAIVideo(videoFile);
+        setVideoResult(vResult);
+        setAiDetection(vResult);
+        setPipelineStep('report');
+        setPhase('done');
+        saveAnalysis(userIdRef.current, {
+          mode: 'aidetect',
+          snippet: `[VIDEO] ${videoFile.name}`,
+          aiScore: vResult.aiScore,
+          verdict: vResult.verdict,
         });
         refreshHistory();
         return;
@@ -466,7 +563,8 @@ export default function App() {
     setPhase('idle'); setAnalysisMode(null); setPipelineStep(null);
     setClaims([]); setResults([]); setVerifiedCount(0);
     setAiDetection(null); setBiasData(null); setImageResult(null);
-    setImagePreviewUrl(null); setError(null); setInputText('');
+    setImagePreviewUrl(null); setVideoResult(null); setVideoPreviewUrl(null);
+    setError(null); setInputText('');
   };
 
   const handleRestoreHistory = (entry) => {
@@ -598,6 +696,7 @@ export default function App() {
                 isDone={phase === 'done'}
                 isAIDetect={analysisMode === 'aidetect'}
                 isImage={!!imagePreviewUrl || !!imageResult}
+                isVideo={!!videoPreviewUrl || !!videoResult}
               />
 
               {analysisMode === 'factcheck' && claims.length > 0 && (
@@ -655,13 +754,15 @@ export default function App() {
                     {imageResult ? 'IMAGE AI DETECTION' : 'AI DETECTION RESULT'}
                   </SectionLabel>
                   {phase === 'done' ? (
-                    imageResult
-                      ? <ImageAIResult result={imageResult} previewUrl={imagePreviewUrl} />
-                      : <AIDetectionResult result={aiDetection} />
+                    videoResult 
+                      ? <VideoAIResult result={videoResult} previewUrl={videoPreviewUrl} />
+                      : imageResult
+                        ? <ImageAIResult result={imageResult} previewUrl={imagePreviewUrl} />
+                        : <AIDetectionResult result={aiDetection} />
                   ) : (
                     <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--radius-lg)', padding: '48px', textAlign: 'center', fontFamily: 'var(--mono)', fontSize: '11px', color: 'var(--dim)', letterSpacing: '1px' }}>
                       <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '2px solid var(--cyan)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 14px' }} />
-                      {imagePreviewUrl ? 'ANALYZING IMAGE...' : 'ANALYZING AUTHORSHIP...'}
+                      {videoPreviewUrl ? 'EXTRACTING & ANALYZING FRAMES...' : imagePreviewUrl ? 'ANALYZING IMAGE...' : 'ANALYZING AUTHORSHIP...'}
                     </div>
                   )}
                 </>

@@ -7,7 +7,7 @@ const STEPS = [
   { id: 'report',  code: '04', label: 'REPORT GENERATION',  sub: 'Compiling accuracy report',              icon: '◆' },
 ];
 
-export default function Pipeline({ currentStep, claimCount, verifiedCount, isDone, isAIDetect, isImage }) {
+export default function Pipeline({ currentStep, claimCount, verifiedCount, isDone, isAIDetect, isImage, isVideo }) {
   const currentIdx = STEPS.findIndex(s => s.id === currentStep);
 
   // allDone: explicit prop from parent (usually phase === 'done')
@@ -23,7 +23,7 @@ export default function Pipeline({ currentStep, claimCount, verifiedCount, isDon
       }}>
         <div style={{ width: '3px', height: '16px', background: 'var(--cyan)', borderRadius: '2px' }} />
         <span style={{ fontFamily: 'var(--display)', fontSize: '14px', letterSpacing: '2.5px', color: 'var(--cyan)' }}>
-          PIPELINE
+          {isVideo ? 'VIDEO PIPELINE' : 'PIPELINE'}
         </span>
         {allDone && (
           <span style={{
@@ -47,7 +47,7 @@ export default function Pipeline({ currentStep, claimCount, verifiedCount, isDon
 
       <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {STEPS.map((step, i) => {
-          const isSkippedStep = isAIDetect && !isImage && (step.id === 'extract' || step.id === 'search');
+          const isSkippedStep = isAIDetect && !isImage && !isVideo && (step.id === 'extract' || step.id === 'search');
           
           const done = (allDone || (currentIdx > i));
           const active = !allDone && i === currentIdx;
@@ -100,7 +100,12 @@ export default function Pipeline({ currentStep, claimCount, verifiedCount, isDon
                     transition: 'color 0.3s',
                   }}>
                     {isAIDetect ? (
-                      isImage ? (
+                      isVideo ? (
+                        step.id === 'extract' ? 'FRAME EXTRACTION' :
+                        step.id === 'search' ? 'SEQUENTIAL SCAN' :
+                        step.id === 'verify' ? 'DEEPFAKE ANALYSIS' :
+                        step.label
+                      ) : isImage ? (
                         step.id === 'extract' ? 'AI GENERATION CHECK' :
                         step.id === 'search' ? 'DEEPFAKE SCAN' :
                         step.id === 'verify' ? 'SOURCE AUTHENTICITY' :
@@ -115,12 +120,17 @@ export default function Pipeline({ currentStep, claimCount, verifiedCount, isDon
                     fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)',
                     marginTop: '3px', letterSpacing: '0.5px',
                   }}>
-                    {active && step.id === 'verify'
+                    {active && step.id === 'verify' && !isVideo && !isImage
                       ? claimCount > 0
                         ? `verifying claim ${Math.min(verifiedCount + 1, claimCount)} of ${claimCount}`
                         : `verifying... ${verifiedCount > 0 ? `(${verifiedCount} done)` : ''}`
                       : isAIDetect ? (
-                        isImage ? (
+                        isVideo ? (
+                          step.id === 'extract' ? 'Decomposing video into frames' :
+                          step.id === 'search' ? 'Sequential deepfake scanning' :
+                          step.id === 'verify' ? 'Final verdict derivation' :
+                          step.sub
+                        ) : isImage ? (
                           step.id === 'extract' ? 'Checking for synthetic generation' :
                           step.id === 'search' ? 'Scanning for deepfake manipulation' :
                           step.id === 'verify' ? 'Final verification' :

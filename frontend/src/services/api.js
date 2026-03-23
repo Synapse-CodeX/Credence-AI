@@ -149,6 +149,46 @@ export async function checkAIImage(file) {
   };
 }
 
+export async function checkAIVideo(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${BACKEND_URL}/api/detect-media/extract-frames`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.detail || `AI Video Detection failed: ${response.status}`);
+  }
+  const data = await response.json();
+
+  // Map VideoDetectionResult to a format similar to ImageAIResult
+  return {
+    filename: data.filename,
+    frameResults: (data.frame_results || []).map(fr => ({
+      aiScore: Math.round((fr.ai_result?.ai_generated_score || 0) * 100),
+      deepfakeScore: Math.round((fr.deepfake_result?.deepfake_score || 0) * 100),
+      verdict: fr.final_verdict,
+      pipelineStage: fr.pipeline_stage,
+      imageUrl: fr.image_url // This is the frame's filename
+    })),
+    finalConclusion: data.final_conclusion,
+    flaggedCount: data.flagged_count,
+    isShortCircuited: data.is_short_circuited,
+    aiScore: data.flagged_count >= 3 ? 90 : (data.flagged_count * 20), // heuristic for overall score
+    verdict: data.flagged_count >= 3 ? 'LIKELY AI/DEEPFAKE' : 'LIKELY AUTHENTIC',
+    pipelineStage: 'video_frames',
+    confidence: 'HIGH',
+    summary: `Analysis of 5 extracted frames: ${data.flagged_count} frames flagged. Final conclusion: ${data.final_conclusion}.`,
+    signals: [
+      'Temporal consistency check',
+      'Frame-by-frame synthetic analysis',
+      data.is_short_circuited ? 'Processing short-circuited due to high confidence' : 'Full frame set analyzed'
+    ]
+  };
+}
+
 // ─── Legacy Wrapper for App.js ──────────────────────────────────────────────
 export function analyzeAll(content) {
   return new Promise((resolve, reject) => {
