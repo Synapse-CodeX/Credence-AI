@@ -234,9 +234,9 @@ function renderReport(report) {
     return;
   }
 
-  const counts = { TRUE: 0, 'PARTIALLY TRUE': 0, FALSE: 0, UNVERIFIABLE: 0 };
+  const counts = { TRUE: 0, PARTIALLY_TRUE: 0, FALSE: 0, UNVERIFIABLE: 0 };
   claims.forEach(c => { if (counts[c.verdict] !== undefined) counts[c.verdict]++; });
-  const score = Math.round(((counts.TRUE + counts['PARTIALLY TRUE'] * 0.5) / total) * 100);
+  const score = Math.round(((counts.TRUE + counts.PARTIALLY_TRUE * 0.5) / total) * 100);
   const scoreColor = score >= 75 ? '#00e887' : score >= 40 ? '#ff8c42' : '#ff4560';
 
   const statsHTML = `
@@ -250,7 +250,7 @@ function renderReport(report) {
         <div class="credence-stat-label">TRUE</div>
       </div>
       <div class="credence-stat-card">
-        <div class="credence-stat-val" style="color:#ff8c42">${counts['PARTIALLY TRUE']}</div>
+        <div class="credence-stat-val" style="color:#ff8c42">${counts.PARTIALLY_TRUE}</div>
         <div class="credence-stat-label">PARTIAL</div>
       </div>
       <div class="credence-stat-card">
@@ -267,12 +267,12 @@ function renderReport(report) {
   const claimsHTML = claims.map((c, i) => {
     const vClass = c.verdict === 'TRUE' ? 'TRUE'
       : c.verdict === 'FALSE' ? 'FALSE'
-      : c.verdict === 'PARTIALLY TRUE' ? 'PARTIAL'
+      : c.verdict === 'PARTIALLY_TRUE' ? 'PARTIAL'
       : 'UNVERIFIABLE';
     const confColor = c.confidence >= 75 ? '#00e887' : c.confidence >= 40 ? '#ff8c42' : '#ff4560';
     const borderColor = c.verdict === 'TRUE' ? '#00e887'
       : c.verdict === 'FALSE' ? '#ff4560'
-      : c.verdict === 'PARTIALLY TRUE' ? '#ff8c42'
+      : c.verdict === 'PARTIALLY_TRUE' ? '#ff8c42'
       : '#333';
 
     return `
@@ -337,3 +337,12 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+
+// ── Background Message Listener ──────────────────────────────────────────
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.command === 'run_fact_check' && message.text) {
+    selectedText = message.text;
+    hideFAB();
+    runFactCheck(selectedText);
+  }
+});
