@@ -257,7 +257,7 @@ export default function App() {
         setPipelineStep('extract'); await sleep(400);
         setPipelineStep('verify');
         const imgResult = await checkAIImage(imageFile);
-        setImageResult({
+        const imgResultData = {
           aiScore: imgResult.aiDetection.aiScore,
           humanScore: imgResult.aiDetection.humanScore,
           verdict: imgResult.aiDetection.verdict === 'LIKELY AI' ? 'LIKELY AI GENERATED'
@@ -265,7 +265,9 @@ export default function App() {
           tool: 'SightEngine',
           signals: imgResult.aiDetection.signals || [],
           summary: `AI probability: ${imgResult.aiDetection.aiScore}%. ${imgResult.aiDetection.verdict}.`,
-        });
+        };
+        setImageResult(imgResultData);
+        setAiDetection(imgResultData);
         setImagePreviewUrl(URL.createObjectURL(imageFile));
         setPipelineStep('report');
         saveAnalysis(userIdRef.current, {
@@ -660,19 +662,27 @@ export default function App() {
                   <SectionLabel color="var(--cyan)">SUMMARY</SectionLabel>
                   <div style={{ border: '1px solid var(--line2)', borderRadius: 'var(--radius-lg)', background: 'var(--bg1)', overflow: 'hidden' }}>
                     <div style={{ padding: '10px 16px', background: 'var(--bg2)', borderBottom: '1px solid var(--line)', fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px' }}>QUICK STATS</div>
-                    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {[
-                        { label: 'AI PROBABILITY', val: `${aiDetection?.aiScore ?? 0}%`, color: 'var(--red)' },
-                        { label: 'HUMAN PROBABILITY', val: `${aiDetection?.humanScore ?? 0}%`, color: 'var(--green)' },
-                        { label: 'VERDICT', val: aiDetection?.verdict || '—', color: aiDetection?.verdict === 'LIKELY AI' ? 'var(--red)' : aiDetection?.verdict === 'LIKELY HUMAN' ? 'var(--green)' : 'var(--orange)' },
-                        { label: 'SIGNALS FOUND', val: `${aiDetection?.signals?.length || 0}`, color: 'var(--cyan)' },
-                      ].map(s => (
-                        <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 'var(--radius)' }}>
-                          <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '1px' }}>{s.label}</span>
-                          <span style={{ fontFamily: 'var(--display)', fontSize: '14px', color: s.color, letterSpacing: '1px' }}>{s.val}</span>
-                        </div>
-                      ))}
-                    </div>
+                      {(() => {
+                        const v = aiDetection?.verdict || '—';
+                        const isAI = v.includes('AI');
+                        const isHuman = v.includes('HUMAN') || v.includes('REAL');
+                        const color = isAI ? 'var(--red)' : isHuman ? 'var(--green)' : 'var(--orange)';
+                        return (
+                          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {[
+                              { label: 'AI PROBABILITY', val: `${aiDetection?.aiScore ?? 0}%`, color: 'var(--red)' },
+                              { label: 'HUMAN PROBABILITY', val: `${aiDetection?.humanScore ?? 0}%`, color: 'var(--green)' },
+                              { label: 'VERDICT', val: v, color: color },
+                              { label: 'SIGNALS FOUND', val: `${aiDetection?.signals?.length || 0}`, color: 'var(--cyan)' },
+                            ].map(s => (
+                              <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', background: 'var(--bg2)', border: '1px solid var(--line)', borderRadius: 'var(--radius)' }}>
+                                <span style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '1px' }}>{s.label}</span>
+                                <span style={{ fontFamily: 'var(--display)', fontSize: '14px', color: s.color, letterSpacing: '1px' }}>{s.val}</span>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                   </div>
                   {biasData && (
                     <>
