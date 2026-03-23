@@ -178,7 +178,7 @@ export default function LandingPage({ onEnter, isSignedIn }) {
               { label: 'CLAIMS ANALYZED', value: 50000, suffix: '+', color: 'var(--a1)' },
               { label: 'ACCURACY RATE', value: 97, suffix: '%', color: 'var(--green)' },
               { label: 'SOURCES CHECKED', value: 200, suffix: 'K+', color: 'var(--cyan)' },
-              { label: 'RESPONSE TIME', value: 3, suffix: 's AVG', color: 'var(--orange)' },
+              { label: 'RESPONSE TIME', value: 30, suffix: 's AVG', color: 'var(--orange)' },
             ].map(s => (
               <div key={s.label} className="landing-stat-card">
                 <div style={{ fontFamily: 'var(--display)', fontSize: isMobile ? '28px' : '36px', color: s.color, lineHeight: 1 }}>

@@ -59,7 +59,7 @@ export default function Header({ onBackToLanding, onLive }) {
             ))}
           </div>
           <div>
-            <div style={{ fontFamily: 'var(--display)', fontSize: '22px', letterSpacing: '3px', color: 'var(--a1)', lineHeight: 1 }}>VERITAI</div>
+            <div style={{ fontFamily: 'var(--display)', fontSize: '22px', letterSpacing: '3px', color: 'var(--a1)', lineHeight: 1 }}>CredenceAI</div>
             <div style={{ fontFamily: 'var(--mono)', fontSize: '9px', color: 'var(--dim)', letterSpacing: '2px', marginTop: '1px' }}>FACT VERIFICATION ENGINE</div>
           </div>
         </div>
