@@ -1,10 +1,10 @@
 import React from 'react';
 
 const VERDICT_CFG = [
-  { key: 'TRUE',           label: 'TRUE',         color: 'var(--green)',  bg: 'var(--green-dim)'  },
-  { key: 'PARTIALLY TRUE', label: 'PARTIAL',       color: 'var(--orange)', bg: 'var(--orange-dim)' },
-  { key: 'FALSE',          label: 'FALSE',         color: 'var(--red)',    bg: 'var(--red-dim)'    },
-  { key: 'UNVERIFIABLE',   label: 'UNVERIFIABLE',  color: 'var(--muted)',  bg: 'var(--line)'       },
+  { key: 'TRUE', label: 'TRUE', color: 'var(--green)', hex: '#00e887', bg: 'var(--green-dim)' },
+  { key: 'PARTIALLY TRUE', label: 'PARTIAL', color: 'var(--orange)', hex: '#ff8c42', bg: 'var(--orange-dim)' },
+  { key: 'FALSE', label: 'FALSE', color: 'var(--red)', hex: '#ff4560', bg: 'var(--red-dim)' },
+  { key: 'UNVERIFIABLE', label: 'UNVERIFIABLE', color: 'var(--muted)', hex: '#6b7a9e', bg: 'var(--line)' },
 ];
 
 function Stat({ label, value, color, sub }) {
@@ -27,7 +27,9 @@ function ConfidenceHeatmap({ claims, results }) {
         {claims.map((c, i) => {
           const r = results[i];
           const conf = r?.confidence || 0;
-          const color = conf >= 75 ? 'var(--green)' : conf >= 40 ? 'var(--orange)' : 'var(--red)';
+          const verdictCfg = VERDICT_CFG.find(v => v.key === r?.verdict);
+          const color = verdictCfg ? verdictCfg.color : (conf >= 75 ? 'var(--green)' : conf >= 40 ? 'var(--orange)' : 'var(--red)');
+          const hex = verdictCfg ? verdictCfg.hex : (conf >= 75 ? '#00e887' : conf >= 40 ? '#ff8c42' : '#ff4560');
           return (
             <div key={i} title={`Claim ${i + 1}: ${conf}% confidence`} style={{
               flex: 1, minWidth: '40px', height: '32px',
