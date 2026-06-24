@@ -1,6 +1,12 @@
+<div align="center">
+
 # CredenceAI
 
-> **CredenceAI** is an AI‑powered fact‑checking and claim‑verification platform built for the hackathon. It combines a FastAPI backend, LangChain/LangGraph orchestration, and a modern React frontend to let users submit text or URLs, retrieve evidence, and receive an accuracy report with citations.
+**CredenceAI** is an AI-powered fact-checking and claim-verification platform. It combines a FastAPI backend, LangChain/LangGraph orchestration, and a modern React frontend to let users submit text or URLs, retrieve evidence, and receive an accuracy report with citations.
+
+<img width="853" height="458" alt="CredenceAI Demo" src="https://github.com/user-attachments/assets/8ad84f90-8ae9-4591-af8a-587896f8c505" />
+
+</div>
 
 ---
 
