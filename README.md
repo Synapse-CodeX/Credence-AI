@@ -2,9 +2,26 @@
 
 # CredenceAI
 
-**CredenceAI** is an AI-powered fact-checking and claim-verification platform. It combines a FastAPI backend, LangChain/LangGraph orchestration, and a modern React frontend to let users submit text or URLs, retrieve evidence, and receive an accuracy report with citations.
+<p>
+  <img src="https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi" alt="FastAPI">
+  <img src="https://img.shields.io/badge/React-Frontend-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React">
+  <img src="https://img.shields.io/badge/LangChain-AI%20Orchestration-1C3C3C?style=for-the-badge" alt="LangChain">
+  <img src="https://img.shields.io/badge/LangGraph-Agentic%20Workflows-blue?style=for-the-badge" alt="LangGraph">
+</p>
 
-<img width="853" height="458" alt="CredenceAI Demo" src="https://github.com/user-attachments/assets/8ad84f90-8ae9-4591-af8a-587896f8c505" />
+<p>
+  <img src="https://img.shields.io/github/license/debangshu919/credence-ai?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/github/stars/debangshu919/credence-ai?style=for-the-badge" alt="Stars">
+  <img src="https://img.shields.io/github/issues/debangshu919/credence-ai?style=for-the-badge" alt="Issues">
+  <img src="https://img.shields.io/github/last-commit/debangshu919/credence-ai?style=for-the-badge" alt="Last Commit">
+</p>
+
+
+<img width="853" alt="CredenceAI Demo" src="https://github.com/user-attachments/assets/8ad84f90-8ae9-4591-af8a-587896f8c505" />
+
+### Verify Claims • Retrieve Evidence • AI-Powered Analysis
+
+**CredenceAI** is an AI-powered fact-checking and claim-verification platform. It combines a FastAPI backend, LangChain/LangGraph orchestration, and a modern React frontend to let users submit text or URLs, retrieve evidence, and receive an accuracy report with citations.
 
 </div>
 
