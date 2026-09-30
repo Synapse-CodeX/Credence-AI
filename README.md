@@ -1,6 +1,3 @@
-
-
-````markdown
 <div align="center">
 
 # CredenceAI
@@ -352,5 +349,5 @@ This project is intended for educational, research, and demonstration purposes.
 
 ---
 
-````
+
 
