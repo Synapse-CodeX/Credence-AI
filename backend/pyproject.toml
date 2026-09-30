@@ -24,3 +24,6 @@ entrypoint = "app.main:app"
 
 [tool.ruff]
 lint.ignore = ["F841"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
