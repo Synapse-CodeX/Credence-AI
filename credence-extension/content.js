@@ -1,6 +1,6 @@
 // CredenceAI Fact Checker — Content Script
 
-const BACKEND_URL = 'http://localhost:8000';
+const BACKEND_URL = 'https://credence-ai-backend-rzip.onrender.com';
 
 let fab = null;
 let sidebar = null;
@@ -200,7 +200,7 @@ async function runFactCheck(text) {
     }
 
   } catch (err) {
-    showError(err.message || 'Failed to connect to CredenceAI backend.\nMake sure it is running on localhost:8000');
+    showError( err.message ||'Failed to connect to the CredenceAI backend. Please try again.');
   }
 }
 
